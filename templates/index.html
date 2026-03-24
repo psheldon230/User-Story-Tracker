@@ -32,7 +32,7 @@
       </div>
       <div>
         <p class="font-bold text-gray-900 text-sm leading-tight">Story Tracker</p>
-        <p class="text-gray-400 text-xs">Jira CSV &rarr; Excel sync &mdash; v3</p>
+        <p class="text-gray-400 text-xs">Jira CSV &rarr; Excel sync &mdash; v4</p>
       </div>
     </div>
   </header>
@@ -355,10 +355,10 @@
     function previewCsv(file, colsId, warningId, previewId) {
       var reader = new FileReader();
       reader.onload = function(e) {
-        var lines = e.target.result.replace(/^\uFEFF/, '').split('\n');
-        if (!lines.length) return;
-        var header = parseCSVRow(lines[0].trim());
-        var lower  = header.map(function(h) { return h.trim().toLowerCase(); });
+        var allRows = parseCSV(e.target.result);
+        if (!allRows.length) return;
+        var header = allRows[0].map(function(h) { return h.trim(); });
+        var lower  = header.map(function(h) { return h.toLowerCase(); });
         var keyIdx    = findCol(lower, KEY_CANDIDATES);
         var sprintIdx = findCol(lower, SPRINT_CANDIDATES);
 
@@ -455,28 +455,21 @@
       }
       var reader = new FileReader();
       reader.onload = function(e) {
-        var text   = e.target.result.replace(/^\uFEFF/, '');
-        var lines  = text.split('\n');
-        if (!lines.length) { toast('CSV appears empty.', 'error'); return; }
+        var allRows = parseCSV(e.target.result);
+        if (allRows.length < 2) { toast('CSV appears empty.', 'error'); return; }
 
-        // Parse header + all data rows first so we can pick the right sprint column
-        var header = parseCSVRow(lines[0].trim());
-        var lower  = header.map(function(h) { return h.trim().toLowerCase(); });
+        var header = allRows[0].map(function(h) { return h.trim(); });
+        var lower  = header.map(function(h) { return h.toLowerCase(); });
         var keyIdx = findCol(lower, KEY_CANDIDATES);
 
         if (keyIdx === null) {
           toast('No Issue Key column found in CSV.', 'error'); return;
         }
 
-        var jiraKeyRe = /^[A-Z][A-Z0-9_]+-\d+$/i;
-        var dataRows = [];
-        for (var i = 1; i < lines.length; i++) {
-          var line = lines[i].trim();
-          if (!line) continue;
-          dataRows.push(parseCSVRow(line));
-        }
-
+        var dataRows = allRows.slice(1).filter(function(r) { return r.some(function(v){ return v.trim(); }); });
         var sprintIdx = findSprintCol(lower, SPRINT_CANDIDATES, dataRows);
+
+        var jiraKeyRe = /^[A-Z][A-Z0-9_]+-\d+$/i;
 
         var stories = [];
         for (var i = 0; i < dataRows.length; i++) {
@@ -509,23 +502,36 @@
       }
     });
 
-    // ── Minimal CSV row parser (handles quoted fields) ─────────────────────────
-    function parseCSVRow(line) {
-      var result = [], cur = '', inQ = false;
-      for (var i = 0; i < line.length; i++) {
-        var c = line[i];
+    // ── Full CSV parser — handles quoted fields with embedded newlines ──────────
+    function parseCSV(text) {
+      var rows = [], row = [], cur = '', inQ = false;
+      text = text.replace(/^\uFEFF/, ''); // strip BOM
+      for (var i = 0; i < text.length; i++) {
+        var c = text[i];
+        var next = text[i + 1];
         if (c === '"') {
-          if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+          if (inQ && next === '"') { cur += '"'; i++; }  // escaped quote
           else { inQ = !inQ; }
         } else if (c === ',' && !inQ) {
-          result.push(cur); cur = '';
+          row.push(cur); cur = '';
+        } else if ((c === '\n' || (c === '\r' && next === '\n')) && !inQ) {
+          if (c === '\r') i++; // skip \n of \r\n
+          row.push(cur); cur = '';
+          rows.push(row); row = [];
+        } else if (c === '\r' && !inQ) {
+          row.push(cur); cur = '';
+          rows.push(row); row = [];
         } else {
           cur += c;
         }
       }
-      result.push(cur);
-      return result;
+      if (cur || row.length) { row.push(cur); rows.push(row); }
+      // drop trailing empty row
+      if (rows.length && rows[rows.length-1].every(function(v){ return v === ''; })) rows.pop();
+      return rows;
     }
+
+    function parseCSVRow(line) { return parseCSV(line)[0] || []; }
 
     // ── Form validation (blocks submit only if files missing) ──────────────────
     document.getElementById('fullForm').addEventListener('submit', function(e) {
