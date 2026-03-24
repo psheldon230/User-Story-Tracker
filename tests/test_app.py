@@ -306,7 +306,6 @@ class TestSyncRoute:
 class TestDuplicateSprintColumn:
 
     def test_picks_column_with_higher_sprint_number(self):
-        """When two Sprint columns exist, use the one with the higher sprint number."""
         data = csv_bytes(
             "Issue key,Sprint,Summary,Sprint",
             "PROJ-1,Sprint 2,Story one,Sprint 5",
@@ -316,10 +315,97 @@ class TestDuplicateSprintColumn:
         assert all(s["sprint"] == "Sprint 5" for s in stories)
 
     def test_picks_higher_even_if_earlier_column(self):
-        """Column order doesn't matter — highest number wins."""
+        """Higher sprint number wins regardless of column position."""
         data = csv_bytes(
             "Issue key,Sprint,Summary,Sprint",
             "PROJ-1,Sprint 9,Story one,Sprint 3",
         )
         stories, _ = parse_jira_csv(data)
         assert stories[0]["sprint"] == "Sprint 9"
+
+    def test_jira_sprint_code_format_not_confused_by_year(self):
+        """Y26.SP04 should resolve to Sprint 4, not Sprint 26."""
+        data = csv_bytes(
+            "Issue key,Sprint,Summary,Sprint",
+            "PROJ-1,Y26.SP03,Story one,Y26.SP05",
+        )
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["sprint"] == "Sprint 5"
+
+    def test_mixed_empty_sprint_columns(self):
+        """If one sprint column is empty and one has values, use the one with values."""
+        data = csv_bytes(
+            "Issue key,Sprint,Summary,Sprint",
+            "PROJ-1,,Story one,Sprint 4",
+        )
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["sprint"] == "Sprint 4"
+
+    def test_many_columns_before_sprint(self):
+        """Sprint columns deep in the CSV (like column AB/AC) are still found."""
+        cols = ["col" + str(i) for i in range(26)]  # 26 filler columns
+        header = "Issue key," + ",".join(cols) + ",Sprint,Extra,Sprint"
+        row    = "PROJ-1,"    + ",".join(["x"] * 26) + ",Sprint 3,y,Sprint 7"
+        data = csv_bytes(header, row)
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["sprint"] == "Sprint 7"
+
+    def test_quoted_fields_with_commas_dont_shift_columns(self):
+        """Quoted fields containing commas must not shift column indices."""
+        data = csv_bytes(
+            'Issue key,Sprint,Summary,Sprint',
+            '"PROJ-1",Sprint 2,"Summary with, a comma",Sprint 6',
+        )
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["key"] == "PROJ-1"
+        assert stories[0]["sprint"] == "Sprint 6"
+
+    def test_quoted_fields_with_newlines_dont_shift_columns(self):
+        """Multi-line quoted fields must not break column detection."""
+        raw = b'Issue key,Sprint,Summary,Sprint\r\n"PROJ-1",Sprint 2,"Line one\nLine two",Sprint 8\r\n'
+        stories, _ = parse_jira_csv(raw)
+        assert stories[0]["key"] == "PROJ-1"
+        assert stories[0]["sprint"] == "Sprint 8"
+
+    def test_windows_line_endings(self):
+        raw = b"Issue key,Sprint,Summary,Sprint\r\nPROJ-1,Sprint 2,Story,Sprint 4\r\n"
+        stories, _ = parse_jira_csv(raw)
+        assert stories[0]["sprint"] == "Sprint 4"
+
+    def test_single_sprint_column_still_works(self):
+        data = csv_bytes(
+            "Issue key,Sprint",
+            "PROJ-1,Y26.SP07",
+        )
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["sprint"] == "Sprint 7"
+
+
+class TestExcelSyncEdgeCases:
+
+    def test_key_with_leading_trailing_spaces_in_excel(self):
+        """Keys with whitespace in Excel are still matched and skipped."""
+        xl = make_excel(["Sprint", "Key"], rows=[["Sprint 1", "  PROJ-1  "]])
+        stories = [{"key": "PROJ-1", "sprint": "Sprint 1"}]
+        _, added, skipped = sync_excel(xl, stories)
+        assert skipped == ["PROJ-1"]
+        assert added == []
+
+    def test_all_stories_already_exist(self):
+        xl = make_excel(["Sprint", "Key"], rows=[
+            ["Sprint 1", "PROJ-1"],
+            ["Sprint 1", "PROJ-2"],
+        ])
+        stories = [{"key": "PROJ-1", "sprint": "Sprint 1"},
+                   {"key": "PROJ-2", "sprint": "Sprint 1"}]
+        _, added, skipped = sync_excel(xl, stories)
+        assert added == []
+        assert skipped == ["PROJ-1", "PROJ-2"]
+
+    def test_all_stories_new(self):
+        xl = make_excel(["Sprint", "Key"])
+        stories = [{"key": "PROJ-10", "sprint": "Sprint 1"},
+                   {"key": "PROJ-11", "sprint": "Sprint 1"}]
+        _, added, skipped = sync_excel(xl, stories)
+        assert added == ["PROJ-10", "PROJ-11"]
+        assert skipped == []

@@ -57,14 +57,19 @@ def _find_sprint_column(header_row: list, data_rows: list, candidates: list):
     if len(indices) == 1:
         return indices[0]
 
+    def extract_sprint_num(val):
+        if not val:
+            return -1
+        m = re.search(r'SP0*(\d+)', val, re.IGNORECASE)
+        if m:
+            return int(m.group(1))
+        m2 = re.search(r'sprint\s*(\d+)', val, re.IGNORECASE)
+        if m2:
+            return int(m2.group(1))
+        return -1
+
     def max_sprint_num(col_idx):
-        best = -1
-        for row in data_rows:
-            if col_idx < len(row) and row[col_idx]:
-                m = re.search(r'\d+', row[col_idx])
-                if m:
-                    best = max(best, int(m.group()))
-        return best
+        return max((extract_sprint_num(row[col_idx]) for row in data_rows if col_idx < len(row)), default=-1)
 
     return max(indices, key=max_sprint_num)
 

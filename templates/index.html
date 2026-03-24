@@ -32,7 +32,7 @@
       </div>
       <div>
         <p class="font-bold text-gray-900 text-sm leading-tight">Story Tracker</p>
-        <p class="text-gray-400 text-xs">Jira CSV &rarr; Excel sync &mdash; v4</p>
+        <p class="text-gray-400 text-xs">Jira CSV &rarr; Excel sync &mdash; v5</p>
       </div>
     </div>
   </header>
@@ -72,7 +72,7 @@
       <ol class="text-amber-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
         <li>In Novartis Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong></li>
         <li>Upload the CSV here and click <strong>Parse &amp; Copy JSON</strong></li>
-        <li>The JSON text appears &mdash; click <strong>Copy</strong> and paste it into a Teams message to yourself</li>
+        <li>The JSON text appears &mdash; click <strong>Copy</strong> and copy it</li>
         <li>Switch to your Deloitte machine &rarr; use <strong>Office: Sync JSON</strong> tab &rarr; paste the text</li>
       </ol>
     </div>
@@ -81,7 +81,7 @@
     <div id="instructions-office" class="bg-emerald-50 border border-emerald-100 rounded-xl px-5 py-4 hidden">
       <p class="text-emerald-800 text-sm font-semibold mb-2">Deloitte Machine Step</p>
       <ol class="text-emerald-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
-        <li>Open the Teams message you sent from VDI &mdash; copy the JSON text</li>
+        <li>Paste the JSON text you copied from VDI</li>
         <li>Paste it into the box below</li>
         <li>Download your Excel tracker from SharePoint and upload it</li>
         <li>Click <strong>Sync Stories</strong> &rarr; download the updated Excel &rarr; upload to SharePoint</li>
@@ -184,7 +184,7 @@
       <!-- JSON output box — shown after parsing -->
       <div id="vdiJsonBox" class="hidden bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
         <div class="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between gap-2">
-          <span class="text-sm font-semibold text-amber-800">JSON &mdash; copy and paste into Teams</span>
+          <span class="text-sm font-semibold text-amber-800">JSON &mdash; copy and paste on your Deloitte machine</span>
           <button type="button" id="vdiCopyBtn"
             style="background:#f59e0b;color:#fff;font-size:12px;font-weight:600;padding:4px 14px;border-radius:6px;border:none;cursor:pointer;">
             Copy
@@ -193,7 +193,7 @@
         <div class="p-5">
           <textarea id="vdiJsonText" readonly
             style="width:100%;height:160px;font-family:monospace;font-size:11px;background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;padding:10px;resize:vertical;color:#374151;"></textarea>
-          <p class="text-xs text-amber-700 mt-2">Select all &rarr; copy &rarr; paste into a Teams message to yourself.</p>
+          <p class="text-xs text-amber-700 mt-2">Click Copy, then paste on your Deloitte machine.</p>
         </div>
       </div>
     </div>
@@ -203,10 +203,10 @@
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
           <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
-          <span class="text-sm font-semibold text-gray-700">Stories JSON <span class="text-gray-400 font-normal">(paste from Teams)</span></span>
+          <span class="text-sm font-semibold text-gray-700">Stories JSON</span>
         </div>
         <div class="p-5">
-          <textarea id="officePasteBox" name="stories_json_text" placeholder="Paste the JSON text from Teams here..."
+          <textarea id="officePasteBox" name="stories_json_text" placeholder="Paste the JSON text here..."
             style="width:100%;height:120px;font-family:monospace;font-size:11px;background:#f9fafb;border:1px solid #d1fae5;border-radius:8px;padding:10px;resize:vertical;color:#374151;"></textarea>
           <p class="text-xs text-gray-400 mt-2">Or upload the .json file if you have it:</p>
           <label id="officeJsonDrop"
@@ -329,6 +329,13 @@
       return null;
     }
 
+    function extractSprintNum(val) {
+      if (!val) return -1;
+      var m = val.match(/SP0*(\d+)/i);   if (m) return parseInt(m[1], 10);
+      var m2 = val.match(/sprint\s*(\d+)/i); if (m2) return parseInt(m2[1], 10);
+      return -1;
+    }
+
     function findSprintCol(lower, candidates, dataRows) {
       var indices = [];
       for (var c = 0; c < candidates.length; c++) {
@@ -343,9 +350,8 @@
       for (var j = 0; j < indices.length; j++) {
         var colIdx = indices[j], maxNum = -1;
         for (var r = 0; r < dataRows.length; r++) {
-          var val = dataRows[r][colIdx] || '';
-          var m = val.match(/\d+/);
-          if (m) maxNum = Math.max(maxNum, parseInt(m[0], 10));
+          var n = extractSprintNum(dataRows[r][colIdx] || '');
+          if (n > maxNum) maxNum = n;
         }
         if (maxNum > bestNum) { bestNum = maxNum; best = colIdx; }
       }
@@ -496,7 +502,7 @@
       ta.select();
       try {
         document.execCommand('copy');
-        toast('Copied! Paste into Teams.', 'success');
+        toast('Copied!', 'success');
       } catch(ex) {
         toast('Select all the text in the box and copy manually.', 'error');
       }
