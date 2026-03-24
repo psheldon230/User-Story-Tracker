@@ -5,7 +5,7 @@ import logging
 from datetime import date, datetime
 
 import openpyxl
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, render_template, request, send_file, redirect, url_for
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
@@ -146,7 +146,8 @@ def sync_excel(excel_bytes: bytes, stories: list) -> tuple:
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    error = request.args.get("error", "")
+    return render_template("index.html", error=error)
 
 
 @app.route("/parse-csv", methods=["POST"])
@@ -155,33 +156,27 @@ def parse_csv():
     try:
         csv_file = request.files.get("jira_csv")
         if not csv_file or csv_file.filename == "":
-            return jsonify({"error": "Please upload your Jira CSV export."}), 400
+            return redirect(url_for("index", error="Please upload your Jira CSV export."), 303)
 
         stories, warnings = parse_jira_csv(csv_file.read())
         if not stories:
-            return jsonify({"error": "No stories found in the Jira CSV."}), 400
+            return redirect(url_for("index", error="No stories found in the Jira CSV."), 303)
 
         today_str = date.today().strftime("%Y%m%d")
         json_bytes = json.dumps(stories, indent=2).encode("utf-8")
-        response = send_file(
+        return send_file(
             io.BytesIO(json_bytes),
             mimetype="application/json",
             as_attachment=True,
             download_name=f"stories_{today_str}.json",
         )
-        response.headers["X-Total-Stories"] = str(len(stories))
-        response.headers["X-Warnings"]      = "; ".join(warnings)
-        response.headers["Access-Control-Expose-Headers"] = (
-            "X-Total-Stories, X-Warnings"
-        )
-        return response
 
     except RuntimeError as e:
         logger.warning("Handled error: %s", e)
-        return jsonify({"error": str(e)}), 400
+        return redirect(url_for("index", error=str(e)), 303)
     except Exception as e:
         logger.exception("Unexpected error")
-        return jsonify({"error": f"Unexpected error: {e}"}), 500
+        return redirect(url_for("index", error=f"Unexpected error: {e}"), 303)
 
 
 @app.route("/sync", methods=["POST"])
@@ -193,47 +188,39 @@ def sync():
         excel_file = request.files.get("excel_file")
 
         if not excel_file or excel_file.filename == "":
-            return jsonify({"error": "Please upload your Excel tracker file."}), 400
+            return redirect(url_for("index", error="Please upload your Excel tracker file."), 303)
 
         warnings = []
         if json_file and json_file.filename != "":
             try:
                 stories = json.loads(json_file.read().decode("utf-8"))
             except Exception:
-                return jsonify({"error": "Could not parse the stories JSON file."}), 400
+                return redirect(url_for("index", error="Could not parse the stories JSON file."), 303)
             if not stories:
-                return jsonify({"error": "No stories found in the JSON file."}), 400
+                return redirect(url_for("index", error="No stories found in the JSON file."), 303)
         elif csv_file and csv_file.filename != "":
             stories, warnings = parse_jira_csv(csv_file.read())
             if not stories:
-                return jsonify({"error": "No stories found in the Jira CSV."}), 400
+                return redirect(url_for("index", error="No stories found in the Jira CSV."), 303)
         else:
-            return jsonify({"error": "Please upload a Jira CSV or a stories JSON file."}), 400
+            return redirect(url_for("index", error="Please upload a Jira CSV or a stories JSON file."), 303)
 
         updated_bytes, new_count, skipped_count = sync_excel(excel_file.read(), stories)
 
         today_str = date.today().strftime("%Y%m%d")
-        response = send_file(
+        return send_file(
             io.BytesIO(updated_bytes),
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             as_attachment=True,
             download_name=f"stories_updated_{today_str}.xlsx",
         )
-        response.headers["X-New-Stories"]     = str(new_count)
-        response.headers["X-Skipped-Stories"] = str(skipped_count)
-        response.headers["X-Total-Stories"]   = str(len(stories))
-        response.headers["X-Warnings"]        = "; ".join(warnings)
-        response.headers["Access-Control-Expose-Headers"] = (
-            "X-New-Stories, X-Skipped-Stories, X-Total-Stories, X-Warnings"
-        )
-        return response
 
     except RuntimeError as e:
         logger.warning("Handled error: %s", e)
-        return jsonify({"error": str(e)}), 400
+        return redirect(url_for("index", error=str(e)), 303)
     except Exception as e:
         logger.exception("Unexpected error")
-        return jsonify({"error": f"Unexpected error: {e}"}), 500
+        return redirect(url_for("index", error=f"Unexpected error: {e}"), 303)
 
 
 if __name__ == "__main__":

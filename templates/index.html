@@ -4,32 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Story Tracker</title>
-  <link rel="stylesheet" href="/static/tailwind.min.css" />
   <style>
-    body { font-family: 'Segoe UI', system-ui, sans-serif; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner {
-      width: 18px; height: 18px;
-      border: 2px solid rgba(255,255,255,0.35);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: inline-block;
-    }
-    @keyframes slideUp {
-      from { transform: translateY(16px); opacity: 0; }
-      to   { transform: translateY(0);    opacity: 1; }
-    }
+    /* ── Tailwind base (inlined — no CDN needed) ── */
+    *,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }*,:after,:before{box-sizing:border-box;border:0 solid #e5e7eb}html{line-height:1.5;-webkit-text-size-adjust:100%;tab-size:4;font-family:ui-sans-serif,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:1em}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;font-weight:inherit;line-height:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}ol,ul{list-style:none;margin:0;padding:0}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset,legend{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}
+    .pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.fixed{position:fixed}.bottom-6{bottom:1.5rem}.left-1\/2{left:50%}.z-50{z-index:50}.mx-auto{margin-left:auto;margin-right:auto}.mb-1\.5{margin-bottom:.375rem}.mb-2{margin-bottom:.5rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.flex{display:flex}.hidden{display:none !important}.h-28{height:7rem}.h-4{height:1rem}.h-5{height:1.25rem}.h-7{height:1.75rem}.h-8{height:2rem}.min-h-screen{min-height:100vh}.w-4{width:1rem}.w-5{width:1.25rem}.w-7{width:1.75rem}.w-8{width:2rem}.w-full{width:100%}.max-w-2xl{max-width:42rem}.max-w-lg{max-width:32rem}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.list-inside{list-style-position:inside}.list-decimal{list-style-type:decimal}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-center{justify-content:center}.gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.space-y-1>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.25rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.25rem*var(--tw-space-y-reverse))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.5rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.5rem*var(--tw-space-y-reverse))}.space-y-4>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem*var(--tw-space-y-reverse))}.space-y-5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.25rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.25rem*var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-xl{border-radius:.75rem}.border{border-width:1px}.border-2{border-width:2px}.border-b{border-bottom-width:1px}.border-dashed{border-style:dashed}.border-amber-100{border-color:rgb(254 243 199)}.border-emerald-100{border-color:rgb(209 250 229)}.border-emerald-200{border-color:rgb(167 243 208)}.border-gray-100{border-color:rgb(243 244 246)}.border-gray-200{border-color:rgb(229 231 235)}.border-gray-300{border-color:rgb(209 213 219)}.border-indigo-100{border-color:rgb(224 231 255)}.border-indigo-200{border-color:rgb(199 210 254)}.bg-amber-50{background-color:rgb(255 251 235)}.bg-amber-500{background-color:rgb(245 158 11)}.bg-emerald-100{background-color:rgb(209 250 229)}.bg-emerald-50{background-color:rgb(236 253 245)}.bg-emerald-600{background-color:rgb(5 150 105)}.bg-gray-100{background-color:rgb(243 244 246)}.bg-gray-50{background-color:rgb(249 250 251)}.bg-indigo-100{background-color:rgb(224 231 255)}.bg-indigo-50{background-color:rgb(238 242 255)}.bg-indigo-600{background-color:rgb(79 70 229)}.bg-red-600{background-color:rgb(220 38 38)}.bg-slate-700{background-color:rgb(51 65 85)}.bg-white{background-color:rgb(255 255 255)}.p-1{padding:.25rem}.p-5{padding:1.25rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-0\.5{padding-top:.125rem;padding-bottom:.125rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-3{padding-top:.75rem;padding-bottom:.75rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-8{padding-top:2rem;padding-bottom:2rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-normal{font-weight:400}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.leading-relaxed{line-height:1.625}.leading-tight{line-height:1.25}.tracking-wide{letter-spacing:.025em}.text-amber-600{color:rgb(217 119 6)}.text-amber-700{color:rgb(180 83 9)}.text-amber-800{color:rgb(146 64 14)}.text-emerald-600{color:rgb(5 150 105)}.text-emerald-700{color:rgb(4 120 87)}.text-emerald-800{color:rgb(6 95 70)}.text-gray-400{color:rgb(156 163 175)}.text-gray-500{color:rgb(107 114 128)}.text-gray-700{color:rgb(55 65 81)}.text-gray-900{color:rgb(17 24 39)}.text-indigo-600{color:rgb(79 70 229)}.text-indigo-700{color:rgb(67 56 202)}.text-indigo-800{color:rgb(55 48 163)}.text-white{color:rgb(255 255 255)}.shadow{--tw-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgba(0,0,0,.05);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.transition-colors{transition-property:color,background-color,border-color;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.hover\:border-amber-400:hover{border-color:rgb(251 191 36)}.hover\:border-emerald-400:hover{border-color:rgb(52 211 153)}.hover\:border-indigo-400:hover{border-color:rgb(129 140 248)}.hover\:bg-amber-50:hover{background-color:rgb(255 251 235)}.hover\:bg-amber-600:hover{background-color:rgb(217 119 6)}.hover\:bg-emerald-50:hover{background-color:rgb(236 253 245)}.hover\:bg-emerald-700:hover{background-color:rgb(4 120 87)}.hover\:bg-indigo-50:hover{background-color:rgb(238 242 255)}.hover\:bg-indigo-700:hover{background-color:rgb(67 56 202)}.disabled\:cursor-not-allowed:disabled{cursor:not-allowed}.disabled\:opacity-50:disabled{opacity:.5}
+
+    /* ── App-specific ── */
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background:#f9fafb; }
+    @keyframes slideUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
     .toast { animation: slideUp 0.25s ease; }
     .drop-zone { transition: border-color 0.15s, background 0.15s; }
     .drop-zone.over { border-color: #6366f1; background: #eef2ff; }
-    /* Guaranteed fallback — works even if external CSS fails to load */
-    .hidden { display: none !important; }
-    /* Native file input shown for VDI compatibility */
-    .file-input-native { margin-top: 8px; font-size: 12px; cursor: pointer; }
+    /* file input styled inline — visible for VDI */
+    .file-btn { display:block; margin-top:8px; font-size:12px; cursor:pointer; color:#4f46e5; text-decoration:underline; }
+    input[type=file] { margin-top:6px; font-size:12px; }
   </style>
 </head>
-<body class="min-h-screen bg-gray-50">
+<body class="min-h-screen">
 
   <header class="bg-white border-b border-gray-200">
     <div class="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
@@ -50,15 +41,15 @@
 
     <!-- Mode tabs -->
     <div class="flex gap-1 bg-gray-100 rounded-xl p-1">
-      <button id="tab-full"
+      <button type="button" id="tab-full"
         class="tab-btn flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors">
         Full Sync
       </button>
-      <button id="tab-vdi"
+      <button type="button" id="tab-vdi"
         class="tab-btn flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors">
         VDI: Parse CSV
       </button>
-      <button id="tab-office"
+      <button type="button" id="tab-office"
         class="tab-btn flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors">
         Office: Sync JSON
       </button>
@@ -77,20 +68,18 @@
 
     <!-- Instructions: vdi -->
     <div id="instructions-vdi" class="bg-amber-50 border border-amber-100 rounded-xl px-5 py-4 hidden">
-      <p class="text-amber-800 text-sm font-semibold mb-2">VDI Step &mdash; open this page in GitHub Codespaces</p>
+      <p class="text-amber-800 text-sm font-semibold mb-2">VDI Step &mdash; use this tab on VDI</p>
       <ol class="text-amber-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
-        <li>On VDI: open GitHub &rarr; go to the repo &rarr; <strong>Code &rarr; Codespaces &rarr; Open</strong></li>
-        <li>In the Codespace terminal run: <code>python app.py</code> &rarr; open the public URL</li>
         <li>In Novartis Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong></li>
         <li>Upload the CSV here and click <strong>Parse &amp; Download JSON</strong></li>
-        <li>Send the <code>.json</code> file to yourself over Teams</li>
-        <li>Switch to your Deloitte machine &rarr; open <strong>localhost:5000</strong> &rarr; use <strong>Office: Sync JSON</strong></li>
+        <li>Save the downloaded <code>.json</code> file and send it to yourself over Teams</li>
+        <li>Switch to your Deloitte machine &rarr; use <strong>Office: Sync JSON</strong> tab</li>
       </ol>
     </div>
 
     <!-- Instructions: office -->
     <div id="instructions-office" class="bg-emerald-50 border border-emerald-100 rounded-xl px-5 py-4 hidden">
-      <p class="text-emerald-800 text-sm font-semibold mb-2">Deloitte Machine Step &mdash; localhost:5000</p>
+      <p class="text-emerald-800 text-sm font-semibold mb-2">Deloitte Machine Step</p>
       <ol class="text-emerald-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
         <li>Download the <code>.json</code> file from Teams (sent from VDI)</li>
         <li>Download your Excel tracker from SharePoint</li>
@@ -100,7 +89,7 @@
     </div>
 
     <!-- ── FULL SYNC FORM ── -->
-    <form id="fullForm" novalidate class="space-y-4">
+    <form id="fullForm" action="/sync" method="POST" enctype="multipart/form-data" class="space-y-4">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
           <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
@@ -108,19 +97,19 @@
         </div>
         <div class="p-5">
           <label id="fullCsvDrop"
-            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/40">
-            <svg id="fullCsvIcon" class="w-7 h-7 text-gray-400 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50">
+            <svg id="fullCsvIcon" class="w-7 h-7 text-gray-400 mb-1\.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
             <p id="fullCsvLabel" class="text-sm text-gray-500">
               <span class="text-indigo-600 font-medium">Upload Jira CSV</span> or drag &amp; drop
             </p>
-            <input type="file" id="full_jira_csv" name="jira_csv" accept=".csv" class="file-input-native" />
+            <input type="file" id="full_jira_csv" name="jira_csv" accept=".csv" />
           </label>
           <div id="fullCsvPreview" class="hidden mt-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Detected columns</p>
-            <div class="flex flex-wrap gap-1.5" id="fullCsvCols"></div>
+            <div class="flex flex-wrap gap-1\.5" id="fullCsvCols"></div>
             <p id="fullCsvWarning" class="hidden text-xs text-amber-600 mt-2"></p>
           </div>
         </div>
@@ -133,32 +122,31 @@
         </div>
         <div class="p-5">
           <label id="fullXlDrop"
-            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/40">
-            <svg id="fullXlIcon" class="w-7 h-7 text-gray-400 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50">
+            <svg id="fullXlIcon" class="w-7 h-7 text-gray-400 mb-1\.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
             <p id="fullXlLabel" class="text-sm text-gray-500">
               <span class="text-indigo-600 font-medium">Upload Excel file</span> or drag &amp; drop
             </p>
-            <input type="file" id="full_excel_file" name="excel_file" accept=".xlsx,.xls" class="file-input-native" />
+            <input type="file" id="full_excel_file" name="excel_file" accept=".xlsx,.xls" />
           </label>
         </div>
       </div>
 
       <button type="submit" id="fullSyncBtn"
-        class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+        class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow transition-colors flex items-center justify-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
         </svg>
-        <span id="fullSyncBtnText">Sync Stories</span>
-        <span id="fullSyncSpinner" class="spinner hidden"></span>
+        Sync Stories
       </button>
     </form>
 
     <!-- ── VDI FORM ── -->
-    <form id="vdiForm" novalidate class="space-y-4 hidden">
+    <form id="vdiForm" action="/parse-csv" method="POST" enctype="multipart/form-data" class="space-y-4 hidden">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
           <span class="w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
@@ -166,37 +154,36 @@
         </div>
         <div class="p-5">
           <label id="vdiCsvDrop"
-            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-amber-400 hover:bg-amber-50/40">
-            <svg id="vdiCsvIcon" class="w-7 h-7 text-gray-400 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-amber-400 hover:bg-amber-50">
+            <svg id="vdiCsvIcon" class="w-7 h-7 text-gray-400 mb-1\.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
             <p id="vdiCsvLabel" class="text-sm text-gray-500">
               <span class="text-amber-600 font-medium">Upload Jira CSV</span> or drag &amp; drop
             </p>
-            <input type="file" id="vdi_jira_csv" name="jira_csv" accept=".csv" class="file-input-native" />
+            <input type="file" id="vdi_jira_csv" name="jira_csv" accept=".csv" />
           </label>
           <div id="vdiCsvPreview" class="hidden mt-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Detected columns</p>
-            <div class="flex flex-wrap gap-1.5" id="vdiCsvCols"></div>
+            <div class="flex flex-wrap gap-1\.5" id="vdiCsvCols"></div>
             <p id="vdiCsvWarning" class="hidden text-xs text-amber-600 mt-2"></p>
           </div>
         </div>
       </div>
 
       <button type="submit" id="vdiParseBtn"
-        class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+        class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow transition-colors flex items-center justify-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
         </svg>
-        <span id="vdiParseBtnText">Parse &amp; Download JSON</span>
-        <span id="vdiParseSpinner" class="spinner hidden"></span>
+        Parse &amp; Download JSON
       </button>
     </form>
 
     <!-- ── OFFICE FORM ── -->
-    <form id="officeForm" novalidate class="space-y-4 hidden">
+    <form id="officeForm" action="/sync" method="POST" enctype="multipart/form-data" class="space-y-4 hidden">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
           <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
@@ -204,15 +191,15 @@
         </div>
         <div class="p-5">
           <label id="officeJsonDrop"
-            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/40">
-            <svg id="officeJsonIcon" class="w-7 h-7 text-gray-400 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-emerald-400 hover:bg-emerald-50">
+            <svg id="officeJsonIcon" class="w-7 h-7 text-gray-400 mb-1\.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
             <p id="officeJsonLabel" class="text-sm text-gray-500">
               <span class="text-emerald-600 font-medium">Upload stories .json</span> or drag &amp; drop
             </p>
-            <input type="file" id="office_stories_json" name="stories_json" accept=".json" class="file-input-native" />
+            <input type="file" id="office_stories_json" name="stories_json" accept=".json" />
           </label>
         </div>
       </div>
@@ -224,117 +211,114 @@
         </div>
         <div class="p-5">
           <label id="officeXlDrop"
-            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/40">
-            <svg id="officeXlIcon" class="w-7 h-7 text-gray-400 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-emerald-400 hover:bg-emerald-50">
+            <svg id="officeXlIcon" class="w-7 h-7 text-gray-400 mb-1\.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
             <p id="officeXlLabel" class="text-sm text-gray-500">
               <span class="text-emerald-600 font-medium">Upload Excel file</span> or drag &amp; drop
             </p>
-            <input type="file" id="office_excel_file" name="excel_file" accept=".xlsx,.xls" class="file-input-native" />
+            <input type="file" id="office_excel_file" name="excel_file" accept=".xlsx,.xls" />
           </label>
         </div>
       </div>
 
       <button type="submit" id="officeSyncBtn"
-        class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+        class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow transition-colors flex items-center justify-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
         </svg>
-        <span id="officeSyncBtnText">Sync Stories</span>
-        <span id="officeSyncSpinner" class="spinner hidden"></span>
+        Sync Stories
       </button>
     </form>
 
   </main>
 
-  <div id="toasts" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 space-y-2 w-full max-w-lg px-4 pointer-events-none"></div>
+  <div id="toasts" class="fixed bottom-6 left-1\/2 -translate-x-1\/2 z-50 space-y-2 w-full max-w-lg px-4 pointer-events-none"></div>
 
   <script>
-    const KEY_CANDIDATES    = ['issue key', 'key', 'issue'];
-    const SPRINT_CANDIDATES = ['sprint', 'sprint name', 'custom field (sprint)'];
+    // ── Show server-side error if redirected back with ?error= ─────────────────
+    (function() {
+      var err = new URLSearchParams(window.location.search).get('error');
+      if (err) {
+        toast(err, 'error');
+        history.replaceState(null, '', '/');
+      }
+    })();
 
-    // ── Mode switching ────────────────────────────────────────────────────────
-
+    // ── Mode switching ─────────────────────────────────────────────────────────
     function setMode(mode) {
-      ['full', 'vdi', 'office'].forEach(m => {
-        document.getElementById(`tab-${m}`).classList.toggle(
-          'bg-white shadow text-gray-900', m === mode
-        );
-        document.getElementById(`tab-${m}`).classList.toggle(
-          'text-gray-500', m !== mode
-        );
-        document.getElementById(`instructions-${m}`).classList.toggle('hidden', m !== mode);
-        document.getElementById(`${m}Form`).classList.toggle('hidden', m !== mode);
+      ['full', 'vdi', 'office'].forEach(function(m) {
+        var tab = document.getElementById('tab-' + m);
+        var instr = document.getElementById('instructions-' + m);
+        var form = document.getElementById(m + 'Form');
+        if (m === mode) {
+          tab.style.background = '#fff';
+          tab.style.boxShadow = '0 1px 3px rgba(0,0,0,.1)';
+          tab.style.color = '#111827';
+          instr.classList.remove('hidden');
+          form.classList.remove('hidden');
+        } else {
+          tab.style.background = '';
+          tab.style.boxShadow = '';
+          tab.style.color = '#6b7280';
+          instr.classList.add('hidden');
+          form.classList.add('hidden');
+        }
       });
     }
 
-    document.getElementById('tab-full').addEventListener('click', () => setMode('full'));
-    document.getElementById('tab-vdi').addEventListener('click',  () => setMode('vdi'));
-    document.getElementById('tab-office').addEventListener('click', () => setMode('office'));
+    document.getElementById('tab-full').addEventListener('click', function() { setMode('full'); });
+    document.getElementById('tab-vdi').addEventListener('click',  function() { setMode('vdi'); });
+    document.getElementById('tab-office').addEventListener('click', function() { setMode('office'); });
 
     setMode('full');
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── CSV column preview ─────────────────────────────────────────────────────
+    var KEY_CANDIDATES    = ['issue key', 'key', 'issue'];
+    var SPRINT_CANDIDATES = ['sprint', 'sprint name', 'custom field (sprint)'];
 
     function findCol(lower, candidates) {
-      for (const c of candidates) {
-        const i = lower.indexOf(c);
-        if (i !== -1) return i;
+      for (var i = 0; i < candidates.length; i++) {
+        var idx = lower.indexOf(candidates[i]);
+        if (idx !== -1) return idx;
       }
       return null;
     }
 
-    function makeDropZone(zoneId, inputId, labelId, iconId, onFile) {
-      const zone  = document.getElementById(zoneId);
-      const input = document.getElementById(inputId);
-      const label = document.getElementById(labelId);
-      const icon  = document.getElementById(iconId);
-
-      function handleFile(f) {
-        icon.classList.add('hidden');
-        label.innerHTML = `<span class="font-medium">&#10003; ${f.name}</span>`;
-        if (onFile) onFile(f);
-      }
-
-      input.addEventListener('change', () => { if (input.files[0]) handleFile(input.files[0]); });
-      zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('over'); });
-      zone.addEventListener('dragleave', () => zone.classList.remove('over'));
-      zone.addEventListener('drop', e => {
-        e.preventDefault(); zone.classList.remove('over');
-        const f = e.dataTransfer.files[0];
-        if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; handleFile(f); }
-      });
-    }
-
     function previewCsv(file, colsId, warningId, previewId) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        const lines  = e.target.result.replace(/^\uFEFF/, '').split('\n');
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var lines = e.target.result.replace(/^\uFEFF/, '').split('\n');
         if (!lines.length) return;
-        const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-        const lower  = header.map(h => h.toLowerCase());
-        const keyIdx    = findCol(lower, KEY_CANDIDATES);
-        const sprintIdx = findCol(lower, SPRINT_CANDIDATES);
+        var header = lines[0].split(',').map(function(h) { return h.replace(/^"|"$/g, '').trim(); });
+        var lower  = header.map(function(h) { return h.toLowerCase(); });
+        var keyIdx    = findCol(lower, KEY_CANDIDATES);
+        var sprintIdx = findCol(lower, SPRINT_CANDIDATES);
 
         document.getElementById(previewId).classList.remove('hidden');
-        const cols = document.getElementById(colsId);
-        const warn = document.getElementById(warningId);
+        var cols = document.getElementById(colsId);
+        var warn = document.getElementById(warningId);
         cols.innerHTML = '';
         warn.classList.add('hidden');
 
-        header.forEach((h, i) => {
-          const isKey    = i === keyIdx;
-          const isSprint = i === sprintIdx;
-          const el = document.createElement('span');
-          el.className = isKey
-            ? 'px-2 py-0.5 rounded text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-200'
-            : isSprint
-            ? 'px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200'
-            : 'px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-400 border border-gray-200';
-          el.textContent = isKey ? `${h} \u2190 Issue Key` : isSprint ? `${h} \u2190 Sprint` : h;
+        header.forEach(function(h, i) {
+          var isKey    = i === keyIdx;
+          var isSprint = i === sprintIdx;
+          var el = document.createElement('span');
+          el.style.cssText = 'display:inline-block;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:600;margin:2px;';
+          if (isKey) {
+            el.style.background = '#e0e7ff'; el.style.color = '#3730a3'; el.style.border = '1px solid #c7d2fe';
+            el.textContent = h + ' \u2190 Issue Key';
+          } else if (isSprint) {
+            el.style.background = '#d1fae5'; el.style.color = '#065f46'; el.style.border = '1px solid #a7f3d0';
+            el.textContent = h + ' \u2190 Sprint';
+          } else {
+            el.style.background = '#f3f4f6'; el.style.color = '#9ca3af'; el.style.border = '1px solid #e5e7eb';
+            el.textContent = h;
+          }
           cols.appendChild(el);
         });
 
@@ -349,147 +333,76 @@
       reader.readAsText(file);
     }
 
-    makeDropZone('fullCsvDrop', 'full_jira_csv',   'fullCsvLabel', 'fullCsvIcon',
-      f => previewCsv(f, 'fullCsvCols', 'fullCsvWarning', 'fullCsvPreview'));
-    makeDropZone('fullXlDrop',  'full_excel_file', 'fullXlLabel',  'fullXlIcon',  null);
+    // ── Drag and drop ──────────────────────────────────────────────────────────
+    function makeDropZone(zoneId, inputId, labelId, iconId, onFile) {
+      var zone  = document.getElementById(zoneId);
+      var input = document.getElementById(inputId);
+      var label = document.getElementById(labelId);
+      var icon  = document.getElementById(iconId);
 
-    makeDropZone('vdiCsvDrop',  'vdi_jira_csv',    'vdiCsvLabel',  'vdiCsvIcon',
-      f => previewCsv(f, 'vdiCsvCols', 'vdiCsvWarning', 'vdiCsvPreview'));
+      function handleFile(f) {
+        if (icon) icon.classList.add('hidden');
+        if (label) label.innerHTML = '<span style="font-weight:500">\u2713 ' + f.name + '</span>';
+        if (onFile) onFile(f);
+      }
 
+      input.addEventListener('change', function() { if (input.files[0]) handleFile(input.files[0]); });
+      zone.addEventListener('dragover',  function(e) { e.preventDefault(); zone.classList.add('over'); });
+      zone.addEventListener('dragleave', function()  { zone.classList.remove('over'); });
+      zone.addEventListener('drop', function(e) {
+        e.preventDefault(); zone.classList.remove('over');
+        var f = e.dataTransfer.files[0];
+        if (f) {
+          try {
+            var dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+          } catch(ex) {}
+          handleFile(f);
+        }
+      });
+    }
+
+    makeDropZone('fullCsvDrop',    'full_jira_csv',       'fullCsvLabel',    'fullCsvIcon',
+      function(f) { previewCsv(f, 'fullCsvCols', 'fullCsvWarning', 'fullCsvPreview'); });
+    makeDropZone('fullXlDrop',     'full_excel_file',     'fullXlLabel',     'fullXlIcon',     null);
+    makeDropZone('vdiCsvDrop',     'vdi_jira_csv',        'vdiCsvLabel',     'vdiCsvIcon',
+      function(f) { previewCsv(f, 'vdiCsvCols', 'vdiCsvWarning', 'vdiCsvPreview'); });
     makeDropZone('officeJsonDrop', 'office_stories_json', 'officeJsonLabel', 'officeJsonIcon', null);
     makeDropZone('officeXlDrop',   'office_excel_file',   'officeXlLabel',   'officeXlIcon',   null);
 
-    // ── Full sync form ────────────────────────────────────────────────────────
-
-    document.getElementById('fullForm').addEventListener('submit', async e => {
-      e.preventDefault();
-      if (!document.getElementById('full_jira_csv').files.length)   { toast('Please upload the Jira CSV.', 'error'); return; }
-      if (!document.getElementById('full_excel_file').files.length) { toast('Please upload the Excel file.', 'error'); return; }
-
-      const btn = document.getElementById('fullSyncBtn');
-      const txt = document.getElementById('fullSyncBtnText');
-      const spn = document.getElementById('fullSyncSpinner');
-      btn.disabled = true; txt.textContent = 'Syncing\u2026'; spn.classList.remove('hidden');
-
-      try {
-        const fd = new FormData();
-        fd.append('jira_csv',   document.getElementById('full_jira_csv').files[0]);
-        fd.append('excel_file', document.getElementById('full_excel_file').files[0]);
-        await doSync(fd);
-      } finally {
-        btn.disabled = false; txt.textContent = 'Sync Stories'; spn.classList.add('hidden');
+    // ── Form validation (blocks submit only if files missing) ──────────────────
+    document.getElementById('fullForm').addEventListener('submit', function(e) {
+      if (!document.getElementById('full_jira_csv').files.length) {
+        e.preventDefault(); toast('Please upload the Jira CSV.', 'error'); return;
+      }
+      if (!document.getElementById('full_excel_file').files.length) {
+        e.preventDefault(); toast('Please upload the Excel file.', 'error'); return;
       }
     });
 
-    // ── VDI parse form ────────────────────────────────────────────────────────
-
-    document.getElementById('vdiForm').addEventListener('submit', async e => {
-      e.preventDefault();
-      if (!document.getElementById('vdi_jira_csv').files.length) { toast('Please upload the Jira CSV.', 'error'); return; }
-
-      const btn = document.getElementById('vdiParseBtn');
-      const txt = document.getElementById('vdiParseBtnText');
-      const spn = document.getElementById('vdiParseSpinner');
-      btn.disabled = true; txt.innerHTML = 'Parsing\u2026'; spn.classList.remove('hidden');
-
-      try {
-        const fd = new FormData();
-        fd.append('jira_csv', document.getElementById('vdi_jira_csv').files[0]);
-        const res = await fetch('/parse-csv', { method: 'POST', body: fd });
-
-        if (!res.ok) {
-          let msg = `Error ${res.status}`;
-          try { msg = (await res.json()).error || msg; } catch {}
-          toast(msg, 'error'); return;
-        }
-
-        const total = res.headers.get('X-Total-Stories') ?? '?';
-        const warns = res.headers.get('X-Warnings') ?? '';
-
-        const blob = await res.blob();
-        const a = Object.assign(document.createElement('a'), {
-          href: URL.createObjectURL(blob),
-          download: (res.headers.get('Content-Disposition') || '').match(/filename="?([^"]+)"?/)?.[1] ?? 'stories.json',
-        });
-        document.body.appendChild(a); a.click(); a.remove();
-
-        toast(`\u2713 Downloaded JSON with ${total} stories. Send it over Teams, then use "Office: Sync JSON".`, 'success');
-        if (warns) toast(`\u2139 ${warns}`, 'info');
-
-      } catch (err) {
-        toast(`Network error: ${err.message}`, 'error');
-      } finally {
-        btn.disabled = false; txt.innerHTML = 'Parse &amp; Download JSON'; spn.classList.add('hidden');
+    document.getElementById('vdiForm').addEventListener('submit', function(e) {
+      if (!document.getElementById('vdi_jira_csv').files.length) {
+        e.preventDefault(); toast('Please upload the Jira CSV.', 'error'); return;
       }
     });
 
-    // ── Office sync form ──────────────────────────────────────────────────────
-
-    document.getElementById('officeForm').addEventListener('submit', async e => {
-      e.preventDefault();
-      if (!document.getElementById('office_stories_json').files.length) { toast('Please upload the stories JSON file.', 'error'); return; }
-      if (!document.getElementById('office_excel_file').files.length)   { toast('Please upload the Excel file.', 'error'); return; }
-
-      const btn = document.getElementById('officeSyncBtn');
-      const txt = document.getElementById('officeSyncBtnText');
-      const spn = document.getElementById('officeSyncSpinner');
-      btn.disabled = true; txt.textContent = 'Syncing\u2026'; spn.classList.remove('hidden');
-
-      try {
-        const fd = new FormData();
-        fd.append('stories_json', document.getElementById('office_stories_json').files[0]);
-        fd.append('excel_file',   document.getElementById('office_excel_file').files[0]);
-        await doSync(fd);
-      } finally {
-        btn.disabled = false; txt.textContent = 'Sync Stories'; spn.classList.add('hidden');
+    document.getElementById('officeForm').addEventListener('submit', function(e) {
+      if (!document.getElementById('office_stories_json').files.length) {
+        e.preventDefault(); toast('Please upload the stories JSON.', 'error'); return;
+      }
+      if (!document.getElementById('office_excel_file').files.length) {
+        e.preventDefault(); toast('Please upload the Excel file.', 'error'); return;
       }
     });
 
-    // ── Shared sync handler ───────────────────────────────────────────────────
-
-    async function doSync(formData) {
-      try {
-        const res = await fetch('/sync', { method: 'POST', body: formData });
-
-        if (!res.ok) {
-          let msg = `Error ${res.status}`;
-          try { msg = (await res.json()).error || msg; } catch {}
-          toast(msg, 'error'); return;
-        }
-
-        const added   = res.headers.get('X-New-Stories')     ?? '?';
-        const skipped = res.headers.get('X-Skipped-Stories') ?? '?';
-        const total   = res.headers.get('X-Total-Stories')   ?? '?';
-        const warns   = res.headers.get('X-Warnings')        ?? '';
-
-        const blob = await res.blob();
-        const a = Object.assign(document.createElement('a'), {
-          href: URL.createObjectURL(blob),
-          download: (res.headers.get('Content-Disposition') || '').match(/filename="?([^"]+)"?/)?.[1] ?? 'stories_updated.xlsx',
-        });
-        document.body.appendChild(a); a.click(); a.remove();
-
-        const msg = added === '0'
-          ? `\u2713 Already up to date \u2014 all ${total} stories are already in your Excel.`
-          : `\u2713 Added ${added} new ${+added === 1 ? 'story' : 'stories'}. ${skipped} already existed (${total} total).`;
-        toast(msg, 'success');
-        if (warns) toast(`\u2139 ${warns}`, 'info');
-
-      } catch (err) {
-        toast(`Network error: ${err.message}`, 'error');
-      }
-    }
-
-    // ── Toast ─────────────────────────────────────────────────────────────────
-
-    function toast(msg, type = 'info') {
-      const colors = { success: 'bg-emerald-600', error: 'bg-red-600', info: 'bg-slate-700' };
-      const el = Object.assign(document.createElement('div'), {
-        className: `toast pointer-events-auto ${colors[type]} text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg`,
-        textContent: msg,
-      });
+    // ── Toast ──────────────────────────────────────────────────────────────────
+    function toast(msg, type) {
+      var bg = type === 'error' ? '#dc2626' : type === 'success' ? '#059669' : '#334155';
+      var el = document.createElement('div');
+      el.className = 'toast pointer-events-auto';
+      el.style.cssText = 'background:' + bg + ';color:#fff;font-size:.875rem;font-weight:500;padding:12px 20px;border-radius:12px;box-shadow:0 10px 15px rgba(0,0,0,.1);margin-bottom:8px;';
+      el.textContent = msg;
       document.getElementById('toasts').appendChild(el);
-      setTimeout(() => el.remove(), 6000);
+      setTimeout(function() { el.remove(); }, 6000);
     }
   </script>
 </body>
