@@ -37,11 +37,36 @@ def _normalise_sprint(raw: str) -> str:
 def _find_column(header_row: list, candidates: list):
     lower = [h.strip().lower() for h in header_row]
     for candidate in candidates:
-        try:
-            return lower.index(candidate.lower())
-        except ValueError:
-            continue
+        idx = next((i for i, h in enumerate(lower) if h == candidate.lower()), None)
+        if idx is not None:
+            return idx
     return None
+
+
+def _find_sprint_column(header_row: list, data_rows: list, candidates: list):
+    """If multiple Sprint columns exist, return the one with the highest sprint number."""
+    import re
+    lower = [h.strip().lower() for h in header_row]
+    indices = []
+    for candidate in candidates:
+        for i, h in enumerate(lower):
+            if h == candidate.lower():
+                indices.append(i)
+    if not indices:
+        return None
+    if len(indices) == 1:
+        return indices[0]
+
+    def max_sprint_num(col_idx):
+        best = -1
+        for row in data_rows:
+            if col_idx < len(row) and row[col_idx]:
+                m = re.search(r'\d+', row[col_idx])
+                if m:
+                    best = max(best, int(m.group()))
+        return best
+
+    return max(indices, key=max_sprint_num)
 
 
 def parse_jira_csv(csv_bytes: bytes) -> tuple:
@@ -54,7 +79,7 @@ def parse_jira_csv(csv_bytes: bytes) -> tuple:
 
     header = rows[0]
     key_idx    = _find_column(header, KEY_CANDIDATES)
-    sprint_idx = _find_column(header, SPRINT_CANDIDATES)
+    sprint_idx = _find_sprint_column(header, rows[1:], SPRINT_CANDIDATES)
 
     warnings = []
     if key_idx is None:

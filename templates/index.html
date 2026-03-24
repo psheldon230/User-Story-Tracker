@@ -304,6 +304,29 @@
       return null;
     }
 
+    function findSprintCol(lower, candidates, dataRows) {
+      var indices = [];
+      for (var c = 0; c < candidates.length; c++) {
+        for (var i = 0; i < lower.length; i++) {
+          if (lower[i] === candidates[c]) indices.push(i);
+        }
+      }
+      if (!indices.length) return null;
+      if (indices.length === 1) return indices[0];
+      // Pick column with highest sprint number in data
+      var best = indices[0], bestNum = -1;
+      for (var j = 0; j < indices.length; j++) {
+        var colIdx = indices[j], maxNum = -1;
+        for (var r = 0; r < dataRows.length; r++) {
+          var val = dataRows[r][colIdx] || '';
+          var m = val.match(/\d+/);
+          if (m) maxNum = Math.max(maxNum, parseInt(m[0], 10));
+        }
+        if (maxNum > bestNum) { bestNum = maxNum; best = colIdx; }
+      }
+      return best;
+    }
+
     function previewCsv(file, colsId, warningId, previewId) {
       var reader = new FileReader();
       reader.onload = function(e) {
@@ -411,22 +434,28 @@
         var lines  = text.split('\n');
         if (!lines.length) { toast('CSV appears empty.', 'error'); return; }
 
-        // Parse header
+        // Parse header + all data rows first so we can pick the right sprint column
         var header = parseCSVRow(lines[0]);
         var lower  = header.map(function(h) { return h.toLowerCase(); });
-        var keyIdx    = findCol(lower, KEY_CANDIDATES);
-        var sprintIdx = findCol(lower, SPRINT_CANDIDATES);
+        var keyIdx = findCol(lower, KEY_CANDIDATES);
 
         if (keyIdx === null) {
           toast('No Issue Key column found in CSV.', 'error'); return;
         }
 
         var jiraKeyRe = /^[A-Z][A-Z0-9_]+-\d+$/i;
-        var stories = [];
+        var dataRows = [];
         for (var i = 1; i < lines.length; i++) {
           var line = lines[i].trim();
           if (!line) continue;
-          var cols = parseCSVRow(line);
+          dataRows.push(parseCSVRow(line));
+        }
+
+        var sprintIdx = findSprintCol(lower, SPRINT_CANDIDATES, dataRows);
+
+        var stories = [];
+        for (var i = 0; i < dataRows.length; i++) {
+          var cols = dataRows[i];
           var key  = cols[keyIdx] ? cols[keyIdx].trim() : '';
           if (!key || !jiraKeyRe.test(key)) continue;
           var sprint = sprintIdx !== null && cols[sprintIdx] ? normaliseSprint(cols[sprintIdx].trim()) : '';
