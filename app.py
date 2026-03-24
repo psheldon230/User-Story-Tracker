@@ -1,5 +1,6 @@
 import io
 import csv
+import json
 import logging
 from datetime import date, datetime
 
@@ -148,20 +149,66 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/sync", methods=["POST"])
-def sync():
+@app.route("/parse-csv", methods=["POST"])
+def parse_csv():
+    """VDI step: parse Jira CSV and return a small JSON file of stories."""
     try:
-        csv_file   = request.files.get("jira_csv")
-        excel_file = request.files.get("excel_file")
-
+        csv_file = request.files.get("jira_csv")
         if not csv_file or csv_file.filename == "":
             return jsonify({"error": "Please upload your Jira CSV export."}), 400
-        if not excel_file or excel_file.filename == "":
-            return jsonify({"error": "Please upload your Excel tracker file."}), 400
 
         stories, warnings = parse_jira_csv(csv_file.read())
         if not stories:
             return jsonify({"error": "No stories found in the Jira CSV."}), 400
+
+        today_str = date.today().strftime("%Y%m%d")
+        json_bytes = json.dumps(stories, indent=2).encode("utf-8")
+        response = send_file(
+            io.BytesIO(json_bytes),
+            mimetype="application/json",
+            as_attachment=True,
+            download_name=f"stories_{today_str}.json",
+        )
+        response.headers["X-Total-Stories"] = str(len(stories))
+        response.headers["X-Warnings"]      = "; ".join(warnings)
+        response.headers["Access-Control-Expose-Headers"] = (
+            "X-Total-Stories, X-Warnings"
+        )
+        return response
+
+    except RuntimeError as e:
+        logger.warning("Handled error: %s", e)
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.exception("Unexpected error")
+        return jsonify({"error": f"Unexpected error: {e}"}), 500
+
+
+@app.route("/sync", methods=["POST"])
+def sync():
+    """Sync stories into Excel. Accepts either a Jira CSV or a pre-parsed JSON file."""
+    try:
+        csv_file   = request.files.get("jira_csv")
+        json_file  = request.files.get("stories_json")
+        excel_file = request.files.get("excel_file")
+
+        if not excel_file or excel_file.filename == "":
+            return jsonify({"error": "Please upload your Excel tracker file."}), 400
+
+        warnings = []
+        if json_file and json_file.filename != "":
+            try:
+                stories = json.loads(json_file.read().decode("utf-8"))
+            except Exception:
+                return jsonify({"error": "Could not parse the stories JSON file."}), 400
+            if not stories:
+                return jsonify({"error": "No stories found in the JSON file."}), 400
+        elif csv_file and csv_file.filename != "":
+            stories, warnings = parse_jira_csv(csv_file.read())
+            if not stories:
+                return jsonify({"error": "No stories found in the Jira CSV."}), 400
+        else:
+            return jsonify({"error": "Please upload a Jira CSV or a stories JSON file."}), 400
 
         updated_bytes, new_count, skipped_count = sync_excel(excel_file.read(), stories)
 
