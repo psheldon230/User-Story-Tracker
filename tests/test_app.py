@@ -182,12 +182,57 @@ class TestSyncExcel:
         assert skipped == ["PROJ-1"]
 
     def test_sprint_written_to_column_a(self):
+        """New sprint gets a black separator row then the story."""
         xl = make_excel(["Sprint", "Key"])
         stories = [{"key": "PROJ-7", "sprint": "Sprint 3"}]
         result, _, _ = sync_excel(xl, stories)
         rows = self._read_excel_rows(result)
-        assert rows[1][0] == "Sprint 3"
-        assert rows[1][1] == "PROJ-7"
+        # rows[1] is the black separator, rows[2] is the story
+        assert rows[2][0] == "Sprint 3"
+        assert rows[2][1] == "PROJ-7"
+
+    def test_old_sprint_inserted_near_existing(self):
+        """Stories from a sprint already in the sheet are inserted after existing sprint rows."""
+        xl = make_excel(["Sprint", "Key"], rows=[
+            ["Sprint 4", "PROJ-1"],
+            ["Sprint 4", "PROJ-2"],
+        ])
+        stories = [{"key": "PROJ-3", "sprint": "Sprint 4"}]
+        result, added, _ = sync_excel(xl, stories)
+        assert added == ["PROJ-3"]
+        rows = self._read_excel_rows(result)
+        # Should be header, PROJ-1, PROJ-2, PROJ-3 — no black row
+        assert rows[3][1] == "PROJ-3"
+        assert len(rows) == 4  # no black separator added
+
+    def test_new_sprint_gets_black_separator(self):
+        """A brand-new sprint gets a black separator row before it."""
+        xl = make_excel(["Sprint", "Key"], rows=[["Sprint 4", "PROJ-1"]])
+        stories = [{"key": "PROJ-10", "sprint": "Sprint 5"}]
+        result, added, _ = sync_excel(xl, stories)
+        assert added == ["PROJ-10"]
+        rows = self._read_excel_rows(result)
+        # header, PROJ-1, black row, PROJ-10
+        assert len(rows) == 4
+        # black row: all cells None (values_only strips fill, so just check story position)
+        assert rows[3][1] == "PROJ-10"
+
+    def test_mixed_old_and_new_sprint(self):
+        """Old-sprint stories inserted inline; new-sprint stories get black separator."""
+        xl = make_excel(["Sprint", "Key"], rows=[
+            ["Sprint 4", "PROJ-1"],
+        ])
+        stories = [
+            {"key": "PROJ-2", "sprint": "Sprint 4"},   # old sprint
+            {"key": "PROJ-10", "sprint": "Sprint 5"},  # new sprint
+        ]
+        result, added, _ = sync_excel(xl, stories)
+        assert set(added) == {"PROJ-2", "PROJ-10"}
+        rows = self._read_excel_rows(result)
+        # header, PROJ-1, PROJ-2 (inserted), black row, PROJ-10
+        assert len(rows) == 5
+        assert rows[2][1] == "PROJ-2"
+        assert rows[4][1] == "PROJ-10"
 
     def test_empty_stories_list(self):
         xl = make_excel(["Sprint", "Key"])
