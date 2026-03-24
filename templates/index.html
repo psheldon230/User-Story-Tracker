@@ -3,413 +3,257 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jira Story Tracker</title>
+  <title>Story Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: { DEFAULT: '#4f46e5', light: '#6366f1', dark: '#3730a3' }
-          }
-        }
-      }
-    }
-  </script>
   <style>
     body { font-family: 'Segoe UI', system-ui, sans-serif; }
-
-    /* Custom file input styling */
-    .file-drop {
-      transition: border-color 0.2s, background-color 0.2s;
-    }
-    .file-drop.drag-over {
-      border-color: #6366f1;
-      background-color: #eef2ff;
-    }
-
-    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
-      width: 20px; height: 20px;
-      border: 2px solid rgba(255,255,255,0.3);
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.35);
       border-top-color: white;
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       display: inline-block;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Toast slide-in */
-    @keyframes slideIn {
-      from { transform: translateY(20px); opacity: 0; }
+    @keyframes slideUp {
+      from { transform: translateY(16px); opacity: 0; }
       to   { transform: translateY(0);    opacity: 1; }
     }
-    .toast { animation: slideIn 0.3s ease; }
-
-    /* Tab active state */
-    .tab-btn.active {
-      background-color: #4f46e5;
-      color: white;
-    }
+    .toast { animation: slideUp 0.25s ease; }
+    .drop-zone { transition: border-color 0.15s, background 0.15s; }
+    .drop-zone.over { border-color: #6366f1; background: #eef2ff; }
   </style>
 </head>
 <body class="min-h-screen bg-gray-50">
 
-  <!-- Header -->
-  <header class="bg-white border-b border-gray-200 shadow-sm">
-    <div class="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-      <div class="w-9 h-9 rounded-lg bg-brand flex items-center justify-center flex-shrink-0">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <header class="bg-white border-b border-gray-200">
+    <div class="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
         </svg>
       </div>
       <div>
-        <h1 class="text-gray-900 font-bold text-base leading-tight">Jira Story Tracker</h1>
-        <p class="text-gray-500 text-xs">Sync Jira stories into your Excel — no duplicates</p>
+        <p class="font-bold text-gray-900 text-sm leading-tight">Story Tracker</p>
+        <p class="text-gray-400 text-xs">Jira CSV &rarr; Excel sync</p>
       </div>
     </div>
   </header>
 
-  <!-- Main -->
-  <main class="max-w-3xl mx-auto px-6 py-8 space-y-6">
+  <main class="max-w-2xl mx-auto px-6 py-8 space-y-5">
 
-    <!-- How it works -->
     <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-4">
       <p class="text-indigo-800 text-sm font-semibold mb-2">How it works</p>
-      <ol class="text-indigo-700 text-sm space-y-1 list-decimal list-inside">
-        <li>Upload your Excel file (Sprint in col A, Issue Key in col B)</li>
-        <li>Enter your Jira connection details</li>
-        <li>Click <strong>Sync Stories</strong> — only new stories are appended</li>
-        <li>Download the updated file instantly</li>
+      <ol class="text-indigo-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
+        <li>In Novartis Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong> &rarr; transfer to this machine</li>
+        <li>Download your Excel tracker from SharePoint</li>
+        <li>Upload both files below and click <strong>Sync</strong></li>
+        <li>Download the updated Excel &rarr; upload back to SharePoint</li>
       </ol>
     </div>
 
     <form id="syncForm" novalidate>
 
-      <!-- ── Step 1: Upload Excel ─────────────────────────── -->
+      <!-- Step 1: Jira CSV -->
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-          <span class="w-5 h-5 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">1</span>
-          <span class="text-sm font-semibold text-gray-700">Upload Excel File</span>
+        <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+          <span class="text-sm font-semibold text-gray-700">Jira CSV Export</span>
         </div>
         <div class="p-5">
-          <label
-            id="fileDropZone"
-            class="file-drop flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/40"
-          >
-            <svg id="fileIcon" class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <label id="csvDrop"
+            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/40">
+            <svg id="csvIcon" class="w-7 h-7 text-gray-400 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
-            <p id="fileLabel" class="text-sm text-gray-500">
-              <span class="text-indigo-600 font-medium">Click to upload</span> or drag & drop
+            <p id="csvLabel" class="text-sm text-gray-500">
+              <span class="text-indigo-600 font-medium">Upload Jira CSV</span> or drag &amp; drop
             </p>
-            <p class="text-xs text-gray-400 mt-1">.xlsx files only</p>
-            <input
-              type="file"
-              id="excel_file"
-              name="excel_file"
-              accept=".xlsx,.xls"
-              class="hidden"
-            />
+            <input type="file" id="jira_csv" name="jira_csv" accept=".csv" class="hidden" />
+          </label>
+
+          <!-- Smart column preview -->
+          <div id="csvPreview" class="hidden mt-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Detected columns</p>
+            <div class="flex flex-wrap gap-1.5" id="csvCols"></div>
+            <p id="csvWarning" class="hidden text-xs text-amber-600 mt-2"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Excel -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-4">
+        <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+          <span class="text-sm font-semibold text-gray-700">
+            Excel Tracker
+            <span class="text-gray-400 font-normal">(downloaded from SharePoint)</span>
+          </span>
+        </div>
+        <div class="p-5">
+          <label id="xlDrop"
+            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/40">
+            <svg id="xlIcon" class="w-7 h-7 text-gray-400 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <p id="xlLabel" class="text-sm text-gray-500">
+              <span class="text-indigo-600 font-medium">Upload Excel file</span> or drag &amp; drop
+            </p>
+            <input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls" class="hidden" />
           </label>
         </div>
       </div>
 
-      <!-- ── Step 2: Jira Connection ──────────────────────── -->
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-4">
-        <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-          <span class="w-5 h-5 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">2</span>
-          <span class="text-sm font-semibold text-gray-700">Jira Connection</span>
-        </div>
-        <div class="p-5 space-y-4">
-
-          <!-- Jira URL -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Jira Base URL
-            </label>
-            <input
-              type="url"
-              name="jira_url"
-              id="jira_url"
-              placeholder="https://jira.yourcompany.com"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-            <p class="text-xs text-gray-400 mt-1">No trailing slash. E.g. <code>https://jira.novartis.com</code></p>
-          </div>
-
-          <!-- Auth type tabs -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Authentication</label>
-            <div class="flex rounded-lg border border-gray-300 overflow-hidden w-fit">
-              <button type="button" id="tab-pat"
-                class="tab-btn active px-4 py-2 text-sm font-medium transition-colors"
-                onclick="setAuthTab('pat')">
-                Personal Access Token
-              </button>
-              <button type="button" id="tab-basic"
-                class="tab-btn px-4 py-2 text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 transition-colors"
-                onclick="setAuthTab('basic')">
-                Username / Password
-              </button>
-            </div>
-            <input type="hidden" name="auth_type" id="auth_type" value="pat" />
-          </div>
-
-          <!-- PAT panel -->
-          <div id="panel-pat">
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Personal Access Token
-            </label>
-            <input
-              type="password"
-              name="token"
-              id="token"
-              placeholder="Paste your PAT here"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
-            />
-            <p class="text-xs text-gray-400 mt-1">
-              Profile → Personal Access Tokens → Create token
-              <a href="#how-to-token" onclick="toggleTokenHelp(event)"
-                class="text-indigo-500 underline ml-1">How do I get one?</a>
-            </p>
-            <!-- Token help accordion -->
-            <div id="token-help" class="hidden mt-3 bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800 space-y-1">
-              <p class="font-semibold mb-2">Getting a Jira Server Personal Access Token:</p>
-              <ol class="list-decimal list-inside space-y-1 text-xs">
-                <li>Open Jira in your browser and log in</li>
-                <li>Click your <strong>profile picture</strong> (top-right corner)</li>
-                <li>Select <strong>Profile</strong> from the dropdown</li>
-                <li>In the left sidebar click <strong>Personal Access Tokens</strong></li>
-                <li>Click <strong>Create token</strong>, give it a name, set an expiry</li>
-                <li>Click <strong>Create</strong> and <strong>copy the token immediately</strong> — it won't be shown again</li>
-                <li>Paste it into the field above</li>
-              </ol>
-              <p class="text-xs text-blue-600 mt-2">
-                ⚠️ PATs require Jira Server 8.14 or later. If your Jira is older, use Username / Password instead.
-              </p>
-            </div>
-          </div>
-
-          <!-- Basic Auth panel -->
-          <div id="panel-basic" class="hidden space-y-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-              <input
-                type="text"
-                name="username"
-                placeholder="your.name@company.com or domain\username"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                name="password"
-                placeholder="••••••••"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ── Step 3: Query ────────────────────────────────── -->
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-4">
-        <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-          <span class="w-5 h-5 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">3</span>
-          <span class="text-sm font-semibold text-gray-700">What to Pull from Jira</span>
-        </div>
-        <div class="p-5 space-y-4">
-          <p class="text-xs text-gray-500">Fill in one or both — Filter ID takes priority if both are set.</p>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Project Key</label>
-              <input
-                type="text"
-                name="project_key"
-                placeholder="e.g. PROJ"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Filter ID</label>
-              <input
-                type="text"
-                name="filter_id"
-                placeholder="e.g. 12345"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-              />
-              <p class="text-xs text-gray-400 mt-1">Found in the URL of a saved Jira filter</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Sync Button ──────────────────────────────────── -->
-      <button
-        type="submit"
-        id="syncBtn"
-        class="mt-6 w-full py-3 px-6 bg-brand hover:bg-brand-dark text-white font-semibold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-      >
+      <!-- Sync -->
+      <button type="submit" id="syncBtn"
+        class="mt-5 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
         </svg>
         <span id="syncBtnText">Sync Stories</span>
         <span id="syncSpinner" class="spinner hidden"></span>
       </button>
 
     </form>
-
   </main>
 
-  <!-- Toast container -->
-  <div id="toastContainer" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 space-y-2 w-full max-w-md px-4 pointer-events-none"></div>
+  <div id="toasts" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 space-y-2 w-full max-w-lg px-4 pointer-events-none"></div>
 
   <script>
-    // ── Auth tab switching ──────────────────────────────────────────────────
-    function setAuthTab(type) {
-      document.getElementById('auth_type').value = type;
-      document.getElementById('panel-pat').classList.toggle('hidden', type !== 'pat');
-      document.getElementById('panel-basic').classList.toggle('hidden', type !== 'basic');
-      document.getElementById('tab-pat').classList.toggle('active', type === 'pat');
-      document.getElementById('tab-basic').classList.toggle('active', type === 'basic');
+    const KEY_CANDIDATES    = ['issue key', 'key', 'issue'];
+    const SPRINT_CANDIDATES = ['sprint', 'sprint name', 'custom field (sprint)'];
 
-      if (type === 'pat') {
-        document.getElementById('tab-pat').classList.remove('bg-white', 'text-gray-600');
-        document.getElementById('tab-basic').classList.add('bg-white', 'text-gray-600');
-      } else {
-        document.getElementById('tab-basic').classList.remove('bg-white', 'text-gray-600');
-        document.getElementById('tab-pat').classList.add('bg-white', 'text-gray-600');
+    function findCol(lower, candidates) {
+      for (const c of candidates) {
+        const i = lower.indexOf(c);
+        if (i !== -1) return i;
       }
+      return null;
     }
 
-    function toggleTokenHelp(e) {
-      e.preventDefault();
-      document.getElementById('token-help').classList.toggle('hidden');
+    function makeDropZone(zoneId, inputId, labelId, iconId, onFile) {
+      const zone  = document.getElementById(zoneId);
+      const input = document.getElementById(inputId);
+      const label = document.getElementById(labelId);
+      const icon  = document.getElementById(iconId);
+
+      function handleFile(f) {
+        icon.classList.add('hidden');
+        label.innerHTML = `<span class="text-indigo-600 font-medium">&#10003; ${f.name}</span>`;
+        if (onFile) onFile(f);
+      }
+
+      input.addEventListener('change', () => { if (input.files[0]) handleFile(input.files[0]); });
+      zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault(); zone.classList.remove('over');
+        const f = e.dataTransfer.files[0];
+        if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; handleFile(f); }
+      });
     }
 
-    // ── File drop zone ──────────────────────────────────────────────────────
-    const dropZone = document.getElementById('fileDropZone');
-    const fileInput = document.getElementById('excel_file');
-    const fileLabel = document.getElementById('fileLabel');
+    function previewCsv(file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const lines  = e.target.result.replace(/^\uFEFF/, '').split('\n');
+        if (!lines.length) return;
+        const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+        const lower  = header.map(h => h.toLowerCase());
+        const keyIdx    = findCol(lower, KEY_CANDIDATES);
+        const sprintIdx = findCol(lower, SPRINT_CANDIDATES);
 
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files.length > 0) {
-        updateFileLabel(fileInput.files[0].name);
-      }
-    });
+        const preview = document.getElementById('csvPreview');
+        const cols    = document.getElementById('csvCols');
+        const warn    = document.getElementById('csvWarning');
+        preview.classList.remove('hidden');
+        cols.innerHTML = '';
+        warn.classList.add('hidden');
 
-    dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropZone.classList.add('drag-over');
-    });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
-        // Transfer to file input via DataTransfer
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        fileInput.files = dt.files;
-        updateFileLabel(file.name);
-      } else {
-        showToast('Please drop an .xlsx or .xls file.', 'error');
-      }
-    });
+        header.forEach((h, i) => {
+          const isKey    = i === keyIdx;
+          const isSprint = i === sprintIdx;
+          const el = document.createElement('span');
+          el.className = isKey
+            ? 'px-2 py-0.5 rounded text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-200'
+            : isSprint
+            ? 'px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200'
+            : 'px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-400 border border-gray-200';
+          el.textContent = isKey ? `${h} \u2190 Issue Key` : isSprint ? `${h} \u2190 Sprint` : h;
+          cols.appendChild(el);
+        });
 
-    function updateFileLabel(name) {
-      fileLabel.innerHTML = `
-        <span class="text-indigo-600 font-medium">✓ ${name}</span>
-      `;
-      document.getElementById('fileIcon').classList.add('hidden');
+        if (keyIdx === null) {
+          warn.textContent = '\u26a0 No Issue Key column found. Make sure your CSV includes "Issue key" or "Key".';
+          warn.classList.remove('hidden');
+        } else if (sprintIdx === null) {
+          warn.textContent = '\u2139 No Sprint column found \u2014 Sprint will be left blank in Excel.';
+          warn.classList.remove('hidden');
+        }
+      };
+      reader.readAsText(file);
     }
 
-    // ── Form submit ─────────────────────────────────────────────────────────
-    document.getElementById('syncForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    makeDropZone('csvDrop', 'jira_csv',   'csvLabel', 'csvIcon', previewCsv);
+    makeDropZone('xlDrop',  'excel_file', 'xlLabel',  'xlIcon',  null);
 
-      const btn = document.getElementById('syncBtn');
+    document.getElementById('syncForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!document.getElementById('jira_csv').files.length)  { toast('Please upload the Jira CSV.', 'error'); return; }
+      if (!document.getElementById('excel_file').files.length) { toast('Please upload the Excel file.', 'error'); return; }
+
+      const btn     = document.getElementById('syncBtn');
       const btnText = document.getElementById('syncBtnText');
       const spinner = document.getElementById('syncSpinner');
-
-      // Basic client-side validation
-      if (!fileInput.files.length) {
-        showToast('Please upload an Excel file first.', 'error');
-        return;
-      }
-      if (!document.getElementById('jira_url').value.trim()) {
-        showToast('Please enter your Jira URL.', 'error');
-        return;
-      }
-
-      // Loading state
-      btn.disabled = true;
-      btnText.textContent = 'Syncing…';
-      spinner.classList.remove('hidden');
+      btn.disabled = true; btnText.textContent = 'Syncing\u2026'; spinner.classList.remove('hidden');
 
       try {
-        const formData = new FormData(document.getElementById('syncForm'));
-        const response = await fetch('/sync', { method: 'POST', body: formData });
+        const res = await fetch('/sync', { method: 'POST', body: new FormData(e.target) });
 
-        if (!response.ok) {
-          let errMsg = `Server error (${response.status})`;
-          try { errMsg = (await response.json()).error || errMsg; } catch {}
-          showToast(errMsg, 'error');
-          return;
+        if (!res.ok) {
+          let msg = `Error ${res.status}`;
+          try { msg = (await res.json()).error || msg; } catch {}
+          toast(msg, 'error'); return;
         }
 
-        // Read custom headers before consuming body as blob
-        const newStories = response.headers.get('X-New-Stories') ?? '?';
-        const totalStories = response.headers.get('X-Total-Stories') ?? '?';
+        const added   = res.headers.get('X-New-Stories')     ?? '?';
+        const skipped = res.headers.get('X-Skipped-Stories') ?? '?';
+        const total   = res.headers.get('X-Total-Stories')   ?? '?';
+        const warns   = res.headers.get('X-Warnings')        ?? '';
 
-        // Trigger download
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const disposition = response.headers.get('Content-Disposition') || '';
-        const match = disposition.match(/filename="?([^"]+)"?/);
-        a.download = match ? match[1] : 'stories_updated.xlsx';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        const blob = await res.blob();
+        const a    = Object.assign(document.createElement('a'), {
+          href: URL.createObjectURL(blob),
+          download: (res.headers.get('Content-Disposition') || '').match(/filename="?([^"]+)"?/)?.[1] ?? 'stories_updated.xlsx',
+        });
+        document.body.appendChild(a); a.click(); a.remove();
 
-        const msg = newStories === '0'
-          ? `✓ Already up to date — no new stories found (${totalStories} total in Jira)`
-          : `✓ Added ${newStories} new ${newStories === '1' ? 'story' : 'stories'} out of ${totalStories} total in Jira`;
-        showToast(msg, newStories === '0' ? 'info' : 'success');
+        const msg = added === '0'
+          ? `\u2713 Already up to date \u2014 all ${total} stories are already in your Excel.`
+          : `\u2713 Added ${added} new ${+added === 1 ? 'story' : 'stories'}. ${skipped} already existed (${total} total in CSV).`;
+        toast(msg, 'success');
+        if (warns) toast(`\u2139 ${warns}`, 'info');
 
       } catch (err) {
-        showToast(`Network error: ${err.message}`, 'error');
+        toast(`Network error: ${err.message}`, 'error');
       } finally {
-        btn.disabled = false;
-        btnText.textContent = 'Sync Stories';
-        spinner.classList.add('hidden');
+        btn.disabled = false; btnText.textContent = 'Sync Stories'; spinner.classList.add('hidden');
       }
     });
 
-    // ── Toast ───────────────────────────────────────────────────────────────
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toastContainer');
-      const colors = {
-        success: 'bg-emerald-600',
-        error: 'bg-red-600',
-        info: 'bg-slate-700',
-      };
-      const div = document.createElement('div');
-      div.className = `toast pointer-events-auto ${colors[type] || colors.info} text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg`;
-      div.textContent = message;
-      container.appendChild(div);
-      setTimeout(() => div.remove(), 5000);
+    function toast(msg, type = 'info') {
+      const colors = { success: 'bg-emerald-600', error: 'bg-red-600', info: 'bg-slate-700' };
+      const el = Object.assign(document.createElement('div'), {
+        className: `toast pointer-events-auto ${colors[type]} text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg`,
+        textContent: msg,
+      });
+      document.getElementById('toasts').appendChild(el);
+      setTimeout(() => el.remove(), 6000);
     }
   </script>
 </body>
