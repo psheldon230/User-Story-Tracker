@@ -1,10 +1,12 @@
 """Tests for app.py — CSV parser, Excel sync, and Flask routes."""
 import io
 import json
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import openpyxl
 import pytest
+
+from openpyxl.styles import PatternFill
 
 from app import app, parse_jira_csv, sync_excel
 
@@ -23,6 +25,25 @@ def make_excel(headers, rows=None):
     ws.append(headers)
     for row in (rows or []):
         ws.append(row)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def make_excel_with_trailing_blanks(headers, rows, extra_blank_rows=10):
+    """Simulates an Excel table that has styled empty rows below the data,
+    which is what happens with real Excel table objects (ListObjects)."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Functional Testing"
+    ws.append(headers)
+    for row in rows:
+        ws.append(row)
+    last_data = ws.max_row
+    white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+    for i in range(1, extra_blank_rows + 1):
+        for col in range(1, len(headers) + 1):
+            ws.cell(row=last_data + i, column=col).fill = white
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -466,3 +487,517 @@ class TestExcelSyncEdgeCases:
         wb.save(buf)
         with pytest.raises(RuntimeError, match="Functional Testing"):
             sync_excel(buf.getvalue(), [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+
+
+# ── Trailing blank rows (the real-world table gap bug) ────────────────────────
+
+class TestTrailingBlankRows:
+    """Excel tables often have styled empty rows below the last data row.
+    Stories must be written immediately after the last non-empty row."""
+
+    def _rows(self, xl_bytes):
+        wb = openpyxl.load_workbook(io.BytesIO(xl_bytes))
+        return list(wb.active.iter_rows(values_only=True))
+
+    def test_new_sprint_no_gap_after_trailing_blanks(self):
+        """Black separator and story appear directly after last data row."""
+        xl = make_excel_with_trailing_blanks(
+            ["Sprint", "Key"],
+            [["Sprint 4", "PROJ-1"]],
+            extra_blank_rows=15,
+        )
+        result, added, _ = sync_excel(xl, [{"key": "PROJ-10", "sprint": "Sprint 5"}])
+        assert added == ["PROJ-10"]
+        rows = self._rows(result)
+        # Row 0 = header, Row 1 = PROJ-1, Row 2 = black separator, Row 3 = PROJ-10
+        assert rows[1][1] == "PROJ-1"
+        assert rows[2][1] is None       # black separator has no key
+        assert rows[3][1] == "PROJ-10"
+
+    def test_old_sprint_no_gap_after_trailing_blanks(self):
+        """Old-sprint insertion also respects trailing blank rows."""
+        xl = make_excel_with_trailing_blanks(
+            ["Sprint", "Key"],
+            [["Sprint 4", "PROJ-1"]],
+            extra_blank_rows=10,
+        )
+        result, added, _ = sync_excel(xl, [{"key": "PROJ-2", "sprint": "Sprint 4"}])
+        assert added == ["PROJ-2"]
+        rows = self._rows(result)
+        # header, PROJ-1, PROJ-2 (inserted) — no gap
+        assert rows[2][1] == "PROJ-2"
+
+    def test_only_header_row_no_gap(self):
+        """Sheet with only headers + trailing blanks still lands stories at row 2."""
+        xl = make_excel_with_trailing_blanks(["Sprint", "Key"], [], extra_blank_rows=5)
+        result, added, _ = sync_excel(xl, [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+        assert added == ["PROJ-1"]
+        rows = self._rows(result)
+        # Row 0 = header, Row 1 = black sep, Row 2 = PROJ-1
+        assert rows[2][1] == "PROJ-1"
+
+    def test_max_row_vs_last_data_row_diverge(self):
+        """Verify that styled empty rows push ws.max_row beyond actual data."""
+        xl = make_excel_with_trailing_blanks(
+            ["Sprint", "Key"],
+            [["Sprint 4", "PROJ-1"]],
+            extra_blank_rows=20,
+        )
+        wb = openpyxl.load_workbook(io.BytesIO(xl))
+        ws = wb["Functional Testing"]
+        assert ws.max_row > 2, "styled blanks should push max_row above 2"
+        from app import _last_data_row
+        assert _last_data_row(ws) == 2
+
+
+# ── Date column and test-user column writing ──────────────────────────────────
+
+class TestDateAndUserColumns:
+
+    def _cell(self, xl_bytes, row, col):
+        wb = openpyxl.load_workbook(io.BytesIO(xl_bytes))
+        v = wb["Functional Testing"].cell(row=row, column=col).value
+        # openpyxl reads date cells back as datetime — normalise for comparison
+        if isinstance(v, datetime):
+            return v.date()
+        return v
+
+    def test_date_tested_header_writes_today(self):
+        xl = make_excel(["Sprint", "Key", "Date Tested"])
+        result, _, _ = sync_excel(xl, [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+        # new story is at row 3 (row 2 = black separator)
+        assert self._cell(result, 3, 3) == date.today()
+
+    def test_test_date_header_writes_today(self):
+        xl = make_excel(["Sprint", "Key", "Test Date"])
+        result, _, _ = sync_excel(xl, [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+        assert self._cell(result, 3, 3) == date.today()
+
+    def test_date_header_case_insensitive(self):
+        xl = make_excel(["Sprint", "Key", "DATE TESTED"])
+        result, _, _ = sync_excel(xl, [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+        assert self._cell(result, 3, 3) == date.today()
+
+    def test_today_date_object_header_writes_today(self):
+        """A header cell that IS today's date as a date object is detected."""
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Functional Testing"
+        ws.cell(row=1, column=1).value = "Sprint"
+        ws.cell(row=1, column=2).value = "Key"
+        ws.cell(row=1, column=3).value = date.today()
+        buf = io.BytesIO()
+        wb.save(buf)
+        result, _, _ = sync_excel(buf.getvalue(), [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+        assert self._cell(result, 3, 3) == date.today()
+
+    def test_yesterday_date_header_not_used_as_date_col(self):
+        """A date object for yesterday in the header must NOT be used as today's col."""
+        yesterday = date.today() - timedelta(days=1)
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Functional Testing"
+        ws.cell(row=1, column=1).value = "Sprint"
+        ws.cell(row=1, column=2).value = "Key"
+        ws.cell(row=1, column=3).value = yesterday  # old date column
+        buf = io.BytesIO()
+        wb.save(buf)
+        result, _, _ = sync_excel(buf.getvalue(), [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+        # Column 3 should NOT have today's date written (it's yesterday's column)
+        assert self._cell(result, 3, 3) is None
+
+    def test_test_user_header_writes_peter(self):
+        xl = make_excel(["Sprint", "Key", "Test User"])
+        result, _, _ = sync_excel(xl, [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+        assert self._cell(result, 3, 3) == "Peter"
+
+    def test_tester_header_writes_peter(self):
+        xl = make_excel(["Sprint", "Key", "Tester"])
+        result, _, _ = sync_excel(xl, [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+        assert self._cell(result, 3, 3) == "Peter"
+
+    def test_peter_capitalised_in_old_sprint_insert(self):
+        """Peter is capital even when inserted inline (not via append path)."""
+        xl = make_excel(["Sprint", "Key", "Test User"],
+                        rows=[["Sprint 4", "PROJ-1", None]])
+        result, _, _ = sync_excel(xl, [{"key": "PROJ-2", "sprint": "Sprint 4"}])
+        wb = openpyxl.load_workbook(io.BytesIO(result))
+        ws = wb["Functional Testing"]
+        keys = [ws.cell(row=r, column=2).value for r in range(2, ws.max_row + 1)]
+        peter_row = next(r for r in range(2, ws.max_row + 1)
+                         if ws.cell(row=r, column=2).value == "PROJ-2")
+        assert ws.cell(row=peter_row, column=3).value == "Peter"
+
+    def test_no_date_or_user_col_still_works(self):
+        """Sync must succeed even when the Excel has no date/user columns."""
+        xl = make_excel(["Sprint", "Key"])
+        result, added, _ = sync_excel(xl, [{"key": "PROJ-1", "sprint": "Sprint 1"}])
+        assert added == ["PROJ-1"]
+
+
+# ── Black separator fill ──────────────────────────────────────────────────────
+
+class TestBlackSeparator:
+
+    def test_separator_row_fill_is_black(self):
+        """The separator row must have black fill on all cells."""
+        xl = make_excel(["Sprint", "Key", "Info"],
+                        rows=[["Sprint 4", "PROJ-1", "x"]])
+        result, _, _ = sync_excel(xl, [{"key": "PROJ-10", "sprint": "Sprint 5"}])
+        wb = openpyxl.load_workbook(io.BytesIO(result))
+        ws = wb["Functional Testing"]
+        # separator is at row 3 (row 2 = PROJ-1, row 3 = sep, row 4 = PROJ-10)
+        sep_row = 3
+        for col in range(1, 4):
+            fill = ws.cell(row=sep_row, column=col).fill
+            assert fill.fgColor.rgb.upper().endswith("000000"), \
+                f"col {col} fill should be black, got {fill.fgColor.rgb}"
+
+    def test_no_separator_when_all_old_sprint(self):
+        """No black separator row added when all stories match existing sprints."""
+        xl = make_excel(["Sprint", "Key"], rows=[["Sprint 4", "PROJ-1"]])
+        result, added, _ = sync_excel(xl, [{"key": "PROJ-2", "sprint": "Sprint 4"}])
+        assert added == ["PROJ-2"]
+        wb = openpyxl.load_workbook(io.BytesIO(result))
+        ws = wb["Functional Testing"]
+        # header, PROJ-1, PROJ-2 — exactly 3 rows, no black sep
+        rows = list(ws.iter_rows(values_only=True))
+        assert len(rows) == 3
+
+    def test_only_one_separator_for_multiple_new_sprints(self):
+        """Multiple new sprints share a single black separator row."""
+        xl = make_excel(["Sprint", "Key"], rows=[["Sprint 3", "PROJ-1"]])
+        stories = [
+            {"key": "PROJ-10", "sprint": "Sprint 5"},
+            {"key": "PROJ-11", "sprint": "Sprint 6"},
+        ]
+        result, added, _ = sync_excel(xl, stories)
+        assert set(added) == {"PROJ-10", "PROJ-11"}
+        wb = openpyxl.load_workbook(io.BytesIO(result))
+        ws = wb["Functional Testing"]
+        rows = list(ws.iter_rows(values_only=True))
+        # header, PROJ-1, black_sep, PROJ-10, PROJ-11 → exactly 5 rows
+        assert len(rows) == 5
+        assert rows[2][1] is None   # black sep
+        assert rows[3][1] == "PROJ-10"
+        assert rows[4][1] == "PROJ-11"
+
+
+# ── Multiple sprint insertion ordering ───────────────────────────────────────
+
+class TestMultiSprintInsertion:
+
+    def _rows(self, xl_bytes):
+        wb = openpyxl.load_workbook(io.BytesIO(xl_bytes))
+        return list(wb.active.iter_rows(values_only=True))
+
+    def test_two_old_sprints_inserted_in_correct_blocks(self):
+        """Stories for Sprint 3 and Sprint 4 are inserted near their own blocks."""
+        xl = make_excel(["Sprint", "Key"], rows=[
+            ["Sprint 3", "PROJ-1"],
+            ["Sprint 3", "PROJ-2"],
+            ["Sprint 4", "PROJ-3"],
+            ["Sprint 4", "PROJ-4"],
+        ])
+        stories = [
+            {"key": "PROJ-5", "sprint": "Sprint 3"},
+            {"key": "PROJ-6", "sprint": "Sprint 4"},
+        ]
+        result, added, _ = sync_excel(xl, stories)
+        assert set(added) == {"PROJ-5", "PROJ-6"}
+        rows = self._rows(result)
+        keys = [r[1] for r in rows[1:]]
+        # Sprint 3 block: PROJ-1, PROJ-2, PROJ-5 — then Sprint 4 block: PROJ-3, PROJ-4, PROJ-6
+        assert keys.index("PROJ-5") < keys.index("PROJ-3"), \
+            "PROJ-5 (Sprint 3) must appear before PROJ-3 (Sprint 4)"
+        assert keys.index("PROJ-6") > keys.index("PROJ-4"), \
+            "PROJ-6 (Sprint 4) must appear after PROJ-4"
+        assert keys.index("PROJ-5") == keys.index("PROJ-2") + 1, \
+            "PROJ-5 must immediately follow PROJ-2"
+
+    def test_insertion_order_within_sprint_preserved(self):
+        """Multiple stories added to the same sprint maintain input order."""
+        xl = make_excel(["Sprint", "Key"], rows=[["Sprint 4", "PROJ-1"]])
+        stories = [
+            {"key": "PROJ-2", "sprint": "Sprint 4"},
+            {"key": "PROJ-3", "sprint": "Sprint 4"},
+            {"key": "PROJ-4", "sprint": "Sprint 4"},
+        ]
+        result, added, _ = sync_excel(xl, stories)
+        assert added == ["PROJ-2", "PROJ-3", "PROJ-4"]
+        rows = self._rows(result)
+        keys = [r[1] for r in rows[1:]]
+        assert keys == ["PROJ-1", "PROJ-2", "PROJ-3", "PROJ-4"]
+
+    def test_mixed_sprints_correct_final_layout(self):
+        """Combined old-sprint insertion + new-sprint append produces correct layout."""
+        xl = make_excel(["Sprint", "Key"], rows=[
+            ["Sprint 3", "PROJ-A"],
+            ["Sprint 4", "PROJ-B"],
+        ])
+        stories = [
+            {"key": "PROJ-C", "sprint": "Sprint 3"},   # old
+            {"key": "PROJ-D", "sprint": "Sprint 4"},   # old
+            {"key": "PROJ-E", "sprint": "Sprint 5"},   # new
+        ]
+        result, added, _ = sync_excel(xl, stories)
+        assert set(added) == {"PROJ-C", "PROJ-D", "PROJ-E"}
+        rows = self._rows(result)
+        keys = [r[1] for r in rows]
+        assert keys.index("PROJ-C") < keys.index("PROJ-B"), "PROJ-C in Sprint 3 block"
+        assert keys.index("PROJ-D") > keys.index("PROJ-B"), "PROJ-D after Sprint 4 start"
+        assert keys.index("PROJ-E") > keys.index("PROJ-D"), "new sprint after old sprints"
+        assert None in keys, "black separator row present"
+
+
+# ── Sprint normalisation edge cases ──────────────────────────────────────────
+
+class TestSprintNormalisationEdgeCases:
+
+    def _sprint(self, raw):
+        data = f"Issue key,Sprint\nPROJ-1,{raw}\n".encode()
+        stories, _ = parse_jira_csv(data)
+        return stories[0]["sprint"]
+
+    def test_sprint_with_leading_zeros_sp001(self):
+        assert self._sprint("SP001") == "Sprint 1"
+
+    def test_sprint_100(self):
+        assert self._sprint("Sprint 100") == "Sprint 100"
+
+    def test_sprint_sp10(self):
+        assert self._sprint("SP10") == "Sprint 10"
+
+    def test_sprint_all_caps(self):
+        assert self._sprint("SPRINT 7") == "Sprint 7"
+
+    def test_sprint_mixed_case_yy_sp(self):
+        assert self._sprint("Y26.SP12") == "Sprint 12"
+
+    def test_sprint_with_surrounding_spaces(self):
+        data = b"Issue key,Sprint\nPROJ-1,  Sprint 3  \n"
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["sprint"] == "Sprint 3"
+
+    def test_no_sprint_match_returns_raw(self):
+        """If the sprint value has no recognisable pattern, return it as-is."""
+        data = b"Issue key,Sprint\nPROJ-1,Backlog\n"
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["sprint"] == "Backlog"
+
+    def test_empty_sprint_value(self):
+        data = b"Issue key,Sprint\nPROJ-1,\n"
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["sprint"] == ""
+
+    def test_story_with_empty_sprint_gets_black_separator(self):
+        """Story with sprint='' is treated as new sprint (won't match any existing)."""
+        xl = make_excel(["Sprint", "Key"], rows=[["Sprint 4", "PROJ-1"]])
+        result, added, _ = sync_excel(xl, [{"key": "PROJ-2", "sprint": ""}])
+        assert added == ["PROJ-2"]
+        rows = list(openpyxl.load_workbook(io.BytesIO(result)).active.iter_rows(values_only=True))
+        # black separator + PROJ-2 after PROJ-1
+        assert len(rows) == 4
+
+
+# ── CSV parser robustness ─────────────────────────────────────────────────────
+
+class TestCsvParserRobustness:
+
+    def test_all_rows_invalid_returns_empty(self):
+        data = csv_bytes(
+            "Issue key,Sprint",
+            "Product Owner,",
+            "Epic,,",
+            ",Sprint 1",
+        )
+        stories, _ = parse_jira_csv(data)
+        assert stories == []
+
+    def test_single_valid_row(self):
+        data = csv_bytes("Issue key,Sprint", "PROJ-1,Sprint 1")
+        stories, _ = parse_jira_csv(data)
+        assert len(stories) == 1
+
+    def test_very_large_sprint_number(self):
+        data = csv_bytes("Issue key,Sprint", "PROJ-1,Sprint 999")
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["sprint"] == "Sprint 999"
+
+    def test_key_with_numbers_in_project_code(self):
+        data = csv_bytes("Issue key,Sprint", "PROJ2024-1,Sprint 1")
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["key"] == "PROJ2024-1"
+
+    def test_key_lowercase_accepted(self):
+        data = csv_bytes("Issue key,Sprint", "proj-1,Sprint 1")
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["key"] == "proj-1"
+
+    def test_whitespace_only_rows_skipped(self):
+        data = b"Issue key,Sprint\nPROJ-1,Sprint 1\n   \n\t\nPROJ-2,Sprint 2\n"
+        stories, _ = parse_jira_csv(data)
+        assert len(stories) == 2
+
+    def test_header_row_only_returns_empty(self):
+        data = b"Issue key,Sprint\n"
+        with pytest.raises(RuntimeError):
+            parse_jira_csv(data)
+
+    def test_summary_column_present_ignored(self):
+        data = csv_bytes(
+            "Issue key,Summary,Sprint",
+            "PROJ-1,A very long summary with commas? no,Sprint 2",
+        )
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["key"] == "PROJ-1"
+        assert stories[0]["sprint"] == "Sprint 2"
+
+
+# ── Route edge cases ──────────────────────────────────────────────────────────
+
+class TestRouteEdgeCases:
+
+    @pytest.fixture
+    def client(self):
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            yield c
+
+    def test_all_stories_returned_in_fetch_response(self, client):
+        xl = make_excel(["Sprint", "Key"])
+        stories = [
+            {"key": "PROJ-1", "sprint": "Sprint 1"},
+            {"key": "PROJ-2", "sprint": "Sprint 1"},
+        ]
+        resp = client.post(
+            "/sync",
+            data={
+                "stories_json": (io.BytesIO(json.dumps(stories).encode()), "s.json"),
+                "excel_file": (io.BytesIO(xl), "tracker.xlsx"),
+            },
+            content_type="multipart/form-data",
+            headers={"X-Requested-With": "fetch"},
+        )
+        data = json.loads(resp.data)
+        assert set(data["all_stories"]) == {"PROJ-1", "PROJ-2"}
+
+    def test_pasted_json_input_accepted(self, client):
+        xl = make_excel(["Sprint", "Key"])
+        stories = [{"key": "PROJ-99", "sprint": "Sprint 9"}]
+        resp = client.post(
+            "/sync",
+            data={
+                "stories_json_text": json.dumps(stories),
+                "excel_file": (io.BytesIO(xl), "tracker.xlsx"),
+            },
+            content_type="multipart/form-data",
+            headers={"X-Requested-With": "fetch"},
+        )
+        assert resp.status_code == 200
+        data = json.loads(resp.data)
+        assert "PROJ-99" in data["added"]
+
+    def test_csv_uploaded_directly_to_sync(self, client):
+        xl = make_excel(["Sprint", "Key"])
+        csv_data = csv_bytes("Issue key,Sprint", "PROJ-5,Sprint 1")
+        resp = client.post(
+            "/sync",
+            data={
+                "jira_csv": (io.BytesIO(csv_data), "export.csv"),
+                "excel_file": (io.BytesIO(xl), "tracker.xlsx"),
+            },
+            content_type="multipart/form-data",
+            headers={"X-Requested-With": "fetch"},
+        )
+        assert resp.status_code == 200
+        data = json.loads(resp.data)
+        assert "PROJ-5" in data["added"]
+
+    def test_invalid_pasted_json_redirects(self, client):
+        xl = make_excel(["Sprint", "Key"])
+        resp = client.post(
+            "/sync",
+            data={
+                "stories_json_text": "{this is not json}",
+                "excel_file": (io.BytesIO(xl), "tracker.xlsx"),
+            },
+            content_type="multipart/form-data",
+        )
+        assert resp.status_code == 303
+        assert "error" in resp.headers["Location"]
+
+    def test_invalid_json_file_redirects(self, client):
+        xl = make_excel(["Sprint", "Key"])
+        resp = client.post(
+            "/sync",
+            data={
+                "stories_json": (io.BytesIO(b"not json at all"), "s.json"),
+                "excel_file": (io.BytesIO(xl), "tracker.xlsx"),
+            },
+            content_type="multipart/form-data",
+        )
+        assert resp.status_code == 303
+
+    def test_empty_json_array_redirects(self, client):
+        xl = make_excel(["Sprint", "Key"])
+        resp = client.post(
+            "/sync",
+            data={
+                "stories_json": (io.BytesIO(b"[]"), "s.json"),
+                "excel_file": (io.BytesIO(xl), "tracker.xlsx"),
+            },
+            content_type="multipart/form-data",
+        )
+        assert resp.status_code == 303
+
+    def test_all_stories_skipped_returns_200_with_empty_added(self, client):
+        xl = make_excel(["Sprint", "Key"], rows=[["Sprint 1", "PROJ-1"]])
+        stories = [{"key": "PROJ-1", "sprint": "Sprint 1"}]
+        resp = client.post(
+            "/sync",
+            data={
+                "stories_json": (io.BytesIO(json.dumps(stories).encode()), "s.json"),
+                "excel_file": (io.BytesIO(xl), "tracker.xlsx"),
+            },
+            content_type="multipart/form-data",
+            headers={"X-Requested-With": "fetch"},
+        )
+        assert resp.status_code == 200
+        data = json.loads(resp.data)
+        assert data["added"] == []
+        assert data["skipped"] == ["PROJ-1"]
+
+    def test_filename_contains_today(self, client):
+        xl = make_excel(["Sprint", "Key"])
+        stories = [{"key": "PROJ-1", "sprint": "Sprint 1"}]
+        resp = client.post(
+            "/sync",
+            data={
+                "stories_json": (io.BytesIO(json.dumps(stories).encode()), "s.json"),
+                "excel_file": (io.BytesIO(xl), "tracker.xlsx"),
+            },
+            content_type="multipart/form-data",
+            headers={"X-Requested-With": "fetch"},
+        )
+        data = json.loads(resp.data)
+        today_str = date.today().strftime("%Y%m%d")
+        assert today_str in data["filename"]
+
+    def test_excel_b64_decodes_to_valid_xlsx(self, client):
+        import base64
+        xl = make_excel(["Sprint", "Key"])
+        stories = [{"key": "PROJ-1", "sprint": "Sprint 1"}]
+        resp = client.post(
+            "/sync",
+            data={
+                "stories_json": (io.BytesIO(json.dumps(stories).encode()), "s.json"),
+                "excel_file": (io.BytesIO(xl), "tracker.xlsx"),
+            },
+            content_type="multipart/form-data",
+            headers={"X-Requested-With": "fetch"},
+        )
+        data = json.loads(resp.data)
+        raw = base64.b64decode(data["excel_b64"])
+        # Should be a valid xlsx (PK zip magic bytes)
+        assert raw[:2] == b"PK"

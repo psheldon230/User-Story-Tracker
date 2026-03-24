@@ -70,7 +70,7 @@ def _best_sprint_for_row(row: list, sprint_indices: list) -> str:
             return int(m2.group(1))
         return -1
 
-    best_val, best_num = "", -1
+    best_val, best_num = "", -2  # -2 so non-numeric sprints (score -1) still win
     for idx in sprint_indices:
         val = row[idx].strip() if idx < len(row) else ""
         n = extract_num(val)
@@ -146,15 +146,16 @@ def _is_test_user_header(value) -> bool:
 
 
 def _is_date_header(value) -> bool:
-    """True for column headers that look like a date label (any date value, or
-    a text label containing 'date' such as 'Date Tested', 'Test Date', etc.)."""
+    """True for text column headers that contain the word 'date'
+    (e.g. 'Date Tested', 'Test Date').  Date/datetime objects are handled
+    exclusively by _is_today_header so they are intentionally excluded here
+    to avoid treating yesterday's date column as today's."""
     if not value:
         return False
     if isinstance(value, (date, datetime)):
-        return True
+        return False  # handled by _is_today_header only
     import re
     s = str(value).strip().lower()
-    # Match any header that contains the word "date" (e.g. "Date Tested", "Test Date")
     return bool(re.search(r'\bdate\b', s))
 
 
