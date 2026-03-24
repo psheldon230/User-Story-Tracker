@@ -43,21 +43,22 @@ def _find_column(header_row: list, candidates: list):
     return None
 
 
-def _find_sprint_column(header_row: list, data_rows: list, candidates: list):
-    """If multiple Sprint columns exist, return the one with the highest sprint number."""
-    import re
+def _find_sprint_indices(header_row: list, candidates: list):
+    """Return ALL column indices that match a sprint candidate."""
     lower = [h.strip().lower() for h in header_row]
     indices = []
     for candidate in candidates:
         for i, h in enumerate(lower):
             if h == candidate.lower():
                 indices.append(i)
-    if not indices:
-        return None
-    if len(indices) == 1:
-        return indices[0]
+    return indices
 
-    def extract_sprint_num(val):
+
+def _best_sprint_for_row(row: list, sprint_indices: list) -> str:
+    """Among all sprint columns, return the normalised value with the highest sprint number."""
+    import re
+
+    def extract_num(val):
         if not val:
             return -1
         m = re.search(r'SP0*(\d+)', val, re.IGNORECASE)
@@ -68,10 +69,13 @@ def _find_sprint_column(header_row: list, data_rows: list, candidates: list):
             return int(m2.group(1))
         return -1
 
-    def max_sprint_num(col_idx):
-        return max((extract_sprint_num(row[col_idx]) for row in data_rows if col_idx < len(row)), default=-1)
-
-    return max(indices, key=max_sprint_num)
+    best_val, best_num = "", -1
+    for idx in sprint_indices:
+        val = row[idx].strip() if idx < len(row) else ""
+        n = extract_num(val)
+        if n > best_num:
+            best_num, best_val = n, val
+    return _normalise_sprint(best_val)
 
 
 def parse_jira_csv(csv_bytes: bytes) -> tuple:
@@ -83,8 +87,8 @@ def parse_jira_csv(csv_bytes: bytes) -> tuple:
         raise RuntimeError("Jira CSV appears to be empty or has no data rows.")
 
     header = rows[0]
-    key_idx    = _find_column(header, KEY_CANDIDATES)
-    sprint_idx = _find_sprint_column(header, rows[1:], SPRINT_CANDIDATES)
+    key_idx       = _find_column(header, KEY_CANDIDATES)
+    sprint_indices = _find_sprint_indices(header, SPRINT_CANDIDATES)
 
     warnings = []
     if key_idx is None:
@@ -92,7 +96,7 @@ def parse_jira_csv(csv_bytes: bytes) -> tuple:
             f"Could not find an Issue Key column in the CSV. "
             f"Columns found: {', '.join(header[:10])}"
         )
-    if sprint_idx is None:
+    if not sprint_indices:
         warnings.append("No Sprint column found — Sprint will be left blank.")
 
     import re
@@ -105,9 +109,7 @@ def parse_jira_csv(csv_bytes: bytes) -> tuple:
         key = row[key_idx].strip() if key_idx < len(row) else ""
         if not key or not _jira_key_re.match(key):
             continue
-        sprint = ""
-        if sprint_idx is not None and sprint_idx < len(row):
-            sprint = _normalise_sprint(row[sprint_idx].strip())
+        sprint = _best_sprint_for_row(row, sprint_indices) if sprint_indices else ""
         stories.append({"key": key, "sprint": sprint})
 
     return stories, warnings

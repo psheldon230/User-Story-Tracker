@@ -336,26 +336,24 @@
       return -1;
     }
 
-    function findSprintCol(lower, candidates, dataRows) {
+    function findSprintIndices(lower, candidates) {
       var indices = [];
       for (var c = 0; c < candidates.length; c++) {
         for (var i = 0; i < lower.length; i++) {
           if (lower[i] === candidates[c]) indices.push(i);
         }
       }
-      if (!indices.length) return null;
-      if (indices.length === 1) return indices[0];
-      // Pick column with highest sprint number in data
-      var best = indices[0], bestNum = -1;
-      for (var j = 0; j < indices.length; j++) {
-        var colIdx = indices[j], maxNum = -1;
-        for (var r = 0; r < dataRows.length; r++) {
-          var n = extractSprintNum(dataRows[r][colIdx] || '');
-          if (n > maxNum) maxNum = n;
-        }
-        if (maxNum > bestNum) { bestNum = maxNum; best = colIdx; }
+      return indices;
+    }
+
+    function bestSprintForRow(cols, sprintIndices) {
+      var bestVal = '', bestNum = -1;
+      for (var j = 0; j < sprintIndices.length; j++) {
+        var val = (cols[sprintIndices[j]] || '').trim();
+        var n = extractSprintNum(val);
+        if (n > bestNum) { bestNum = n; bestVal = val; }
       }
-      return best;
+      return normaliseSprint(bestVal);
     }
 
     function previewCsv(file, colsId, warningId, previewId) {
@@ -473,7 +471,7 @@
         }
 
         var dataRows = allRows.slice(1).filter(function(r) { return r.some(function(v){ return v.trim(); }); });
-        var sprintIdx = findSprintCol(lower, SPRINT_CANDIDATES, dataRows);
+        var sprintIndices = findSprintIndices(lower, SPRINT_CANDIDATES);
 
         var jiraKeyRe = /^[A-Z][A-Z0-9_]+-\d+$/i;
 
@@ -482,7 +480,7 @@
           var cols = dataRows[i];
           var key  = cols[keyIdx] ? cols[keyIdx].trim() : '';
           if (!key || !jiraKeyRe.test(key)) continue;
-          var sprint = sprintIdx !== null && cols[sprintIdx] ? normaliseSprint(cols[sprintIdx].trim()) : '';
+          var sprint = sprintIndices.length ? bestSprintForRow(cols, sprintIndices) : '';
           stories.push({ key: key, sprint: sprint });
         }
 

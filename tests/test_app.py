@@ -305,23 +305,27 @@ class TestSyncRoute:
 
 class TestDuplicateSprintColumn:
 
-    def test_picks_column_with_higher_sprint_number(self):
+    def test_picks_higher_sprint_per_row(self):
+        """Each row independently gets the higher of its two sprint values."""
         data = csv_bytes(
             "Issue key,Sprint,Summary,Sprint",
-            "PROJ-1,Sprint 2,Story one,Sprint 5",
-            "PROJ-2,Sprint 2,Story two,Sprint 5",
+            "PROJ-1,Sprint 4,Story one,Sprint 5",   # row has 4 and 5 → must pick 5
+            "PROJ-2,Sprint 5,Story two,Sprint 4",   # row has 5 and 4 → must pick 5
         )
         stories, _ = parse_jira_csv(data)
-        assert all(s["sprint"] == "Sprint 5" for s in stories)
+        assert stories[0]["sprint"] == "Sprint 5"
+        assert stories[1]["sprint"] == "Sprint 5"
 
-    def test_picks_higher_even_if_earlier_column(self):
-        """Higher sprint number wins regardless of column position."""
+    def test_different_sprints_per_row(self):
+        """Rows with different sprint values each get their own max."""
         data = csv_bytes(
             "Issue key,Sprint,Summary,Sprint",
-            "PROJ-1,Sprint 9,Story one,Sprint 3",
+            "PROJ-1,Sprint 3,Story one,Sprint 6",
+            "PROJ-2,Sprint 7,Story two,Sprint 2",
         )
         stories, _ = parse_jira_csv(data)
-        assert stories[0]["sprint"] == "Sprint 9"
+        assert stories[0]["sprint"] == "Sprint 6"
+        assert stories[1]["sprint"] == "Sprint 7"
 
     def test_jira_sprint_code_format_not_confused_by_year(self):
         """Y26.SP04 should resolve to Sprint 4, not Sprint 26."""
@@ -343,7 +347,7 @@ class TestDuplicateSprintColumn:
 
     def test_many_columns_before_sprint(self):
         """Sprint columns deep in the CSV (like column AB/AC) are still found."""
-        cols = ["col" + str(i) for i in range(26)]  # 26 filler columns
+        cols = ["col" + str(i) for i in range(26)]
         header = "Issue key," + ",".join(cols) + ",Sprint,Extra,Sprint"
         row    = "PROJ-1,"    + ",".join(["x"] * 26) + ",Sprint 3,y,Sprint 7"
         data = csv_bytes(header, row)
@@ -351,7 +355,6 @@ class TestDuplicateSprintColumn:
         assert stories[0]["sprint"] == "Sprint 7"
 
     def test_quoted_fields_with_commas_dont_shift_columns(self):
-        """Quoted fields containing commas must not shift column indices."""
         data = csv_bytes(
             'Issue key,Sprint,Summary,Sprint',
             '"PROJ-1",Sprint 2,"Summary with, a comma",Sprint 6',
@@ -361,14 +364,13 @@ class TestDuplicateSprintColumn:
         assert stories[0]["sprint"] == "Sprint 6"
 
     def test_quoted_fields_with_newlines_dont_shift_columns(self):
-        """Multi-line quoted fields must not break column detection."""
         raw = b'Issue key,Sprint,Summary,Sprint\r\n"PROJ-1",Sprint 2,"Line one\nLine two",Sprint 8\r\n'
         stories, _ = parse_jira_csv(raw)
         assert stories[0]["key"] == "PROJ-1"
         assert stories[0]["sprint"] == "Sprint 8"
 
     def test_windows_line_endings(self):
-        raw = b"Issue key,Sprint,Summary,Sprint\r\nPROJ-1,Sprint 2,Story,Sprint 4\r\n"
+        raw = b"Issue key,Sprint,Summary,Sprint\r\nPROJ-1,Sprint 4,Story,Sprint 2\r\n"
         stories, _ = parse_jira_csv(raw)
         assert stories[0]["sprint"] == "Sprint 4"
 
