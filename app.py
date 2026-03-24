@@ -146,7 +146,12 @@ def _is_test_user_header(value) -> bool:
 
 def sync_excel(excel_bytes: bytes, stories: list) -> tuple:
     wb = openpyxl.load_workbook(io.BytesIO(excel_bytes))
-    ws = wb.active
+    sheet_name = "Functional Testing"
+    if sheet_name not in wb.sheetnames:
+        raise RuntimeError(
+            f"Sheet '{sheet_name}' not found. Available sheets: {', '.join(wb.sheetnames)}"
+        )
+    ws = wb[sheet_name]
 
     existing_keys: set = set()
     for row in ws.iter_rows(min_row=2, values_only=True):

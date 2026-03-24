@@ -16,9 +16,10 @@ def csv_bytes(*lines):
 
 
 def make_excel(headers, rows=None):
-    """Return bytes of a minimal .xlsx with given headers and optional data rows."""
+    """Return bytes of a minimal .xlsx with a 'Functional Testing' sheet."""
     wb = openpyxl.Workbook()
     ws = wb.active
+    ws.title = "Functional Testing"
     ws.append(headers)
     for row in (rows or []):
         ws.append(row)
@@ -411,3 +412,12 @@ class TestExcelSyncEdgeCases:
         _, added, skipped = sync_excel(xl, stories)
         assert added == ["PROJ-10", "PROJ-11"]
         assert skipped == []
+
+    def test_wrong_sheet_name_raises(self):
+        """If the Excel has no 'Functional Testing' sheet, raise a clear error."""
+        wb = openpyxl.Workbook()
+        wb.active.title = "Sheet1"
+        buf = io.BytesIO()
+        wb.save(buf)
+        with pytest.raises(RuntimeError, match="Functional Testing"):
+            sync_excel(buf.getvalue(), [{"key": "PROJ-1", "sprint": "Sprint 1"}])
