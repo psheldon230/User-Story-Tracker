@@ -145,7 +145,29 @@ def _is_test_user_header(value) -> bool:
     )
 
 
+def _is_date_header(value) -> bool:
+    """True for column headers that look like a date label (any date value, or
+    a text label containing 'date' such as 'Date Tested', 'Test Date', etc.)."""
+    if not value:
+        return False
+    if isinstance(value, (date, datetime)):
+        return True
+    import re
+    s = str(value).strip().lower()
+    # Match any header that contains the word "date" (e.g. "Date Tested", "Test Date")
+    return bool(re.search(r'\bdate\b', s))
+
+
 _BLACK_FILL = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
+
+
+def _last_data_row(ws) -> int:
+    """Return the 1-based index of the last row containing any non-None value."""
+    last = 1
+    for row_idx, row in enumerate(ws.iter_rows(min_row=1, values_only=True), start=1):
+        if any(cell is not None for cell in row):
+            last = row_idx
+    return last
 
 
 def _write_story_row(ws, row_idx, story, max_col, today_col, test_user_col, today):
@@ -154,7 +176,7 @@ def _write_story_row(ws, row_idx, story, max_col, today_col, test_user_col, toda
     if today_col:
         ws.cell(row=row_idx, column=today_col).value = today
     if test_user_col:
-        ws.cell(row=row_idx, column=test_user_col).value = "peter"
+        ws.cell(row=row_idx, column=test_user_col).value = "Peter"
 
 
 def sync_excel(excel_bytes: bytes, stories: list) -> tuple:
@@ -183,7 +205,7 @@ def sync_excel(excel_bytes: bytes, stories: list) -> tuple:
     for cell in ws[1]:
         if cell.value is None:
             continue
-        if today_col is None and _is_today_header(cell.value):
+        if today_col is None and (_is_today_header(cell.value) or _is_date_header(cell.value)):
             today_col = cell.column
         if test_user_col is None and _is_test_user_header(cell.value):
             test_user_col = cell.column
@@ -217,22 +239,23 @@ def sync_excel(excel_bytes: bytes, stories: list) -> tuple:
             _write_story_row(ws, insert_after + 1 + i, story, max_col, today_col, test_user_col, today)
             added_keys.append(story["key"])
 
-    # Append new-sprint stories with a black separator row first
+    # Append new-sprint stories immediately after the last row with actual data,
+    # preceded by a black separator row.
     if new_sprint_stories:
-        ws.append([None] * max_col)
-        sep_row = ws.max_row
+        write_row = _last_data_row(ws) + 1
+        # Black separator
         for col in range(1, max_col + 1):
-            ws.cell(row=sep_row, column=col).fill = _BLACK_FILL
+            ws.cell(row=write_row, column=col).fill = _BLACK_FILL
+        write_row += 1
 
         for story in new_sprint_stories:
-            new_row = [None] * max_col
-            new_row[0] = story["sprint"]
-            new_row[1] = story["key"]
+            ws.cell(row=write_row, column=1).value = story["sprint"]
+            ws.cell(row=write_row, column=2).value = story["key"]
             if today_col is not None:
-                new_row[today_col - 1] = today
+                ws.cell(row=write_row, column=today_col).value = today
             if test_user_col is not None:
-                new_row[test_user_col - 1] = "peter"
-            ws.append(new_row)
+                ws.cell(row=write_row, column=test_user_col).value = "Peter"
+            write_row += 1
             added_keys.append(story["key"])
 
     output = io.BytesIO()
@@ -324,6 +347,7 @@ def sync():
             return jsonify({
                 "added": added_keys,
                 "skipped": skipped_keys,
+                "all_stories": [s["key"] for s in stories],
                 "filename": filename,
                 "excel_b64": base64.b64encode(updated_bytes).decode("utf-8"),
             })
