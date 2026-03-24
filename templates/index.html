@@ -59,32 +59,32 @@
     <div id="instructions-full" class="bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-4">
       <p class="text-indigo-800 text-sm font-semibold mb-2">How it works &mdash; same machine</p>
       <ol class="text-indigo-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
-        <li>In Novartis Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong></li>
+        <li>In Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong></li>
         <li>Download your Excel tracker from SharePoint</li>
-        <li>Upload both files below and click <strong>Sync</strong></li>
-        <li>Download the updated Excel &rarr; upload back to SharePoint</li>
+        <li>Upload both files below and click <strong>Sync Stories</strong></li>
+        <li>Download the updated Excel and upload it back to SharePoint</li>
       </ol>
     </div>
 
     <!-- Instructions: vdi -->
     <div id="instructions-vdi" class="bg-amber-50 border border-amber-100 rounded-xl px-5 py-4 hidden">
-      <p class="text-amber-800 text-sm font-semibold mb-2">VDI Step &mdash; use this tab on VDI</p>
+      <p class="text-amber-800 text-sm font-semibold mb-2">Step 1 &mdash; do this on VDI</p>
       <ol class="text-amber-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
-        <li>In Novartis Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong></li>
+        <li>In Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong></li>
         <li>Upload the CSV here and click <strong>Parse &amp; Copy JSON</strong></li>
-        <li>The JSON text appears &mdash; click <strong>Copy</strong> and copy it</li>
-        <li>Switch to your Deloitte machine &rarr; use <strong>Office: Sync JSON</strong> tab &rarr; paste the text</li>
+        <li>Click <strong>Copy</strong> to copy the JSON text</li>
+        <li>Switch to your other machine &rarr; open this tool &rarr; use the <strong>Office: Sync JSON</strong> tab</li>
       </ol>
     </div>
 
     <!-- Instructions: office -->
     <div id="instructions-office" class="bg-emerald-50 border border-emerald-100 rounded-xl px-5 py-4 hidden">
-      <p class="text-emerald-800 text-sm font-semibold mb-2">Deloitte Machine Step</p>
+      <p class="text-emerald-800 text-sm font-semibold mb-2">Step 2 &mdash; do this on your office machine</p>
       <ol class="text-emerald-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
-        <li>Paste the JSON text you copied from VDI</li>
-        <li>Paste it into the box below</li>
+        <li>Paste the JSON text you copied from VDI into the box below</li>
         <li>Download your Excel tracker from SharePoint and upload it</li>
-        <li>Click <strong>Sync Stories</strong> &rarr; download the updated Excel &rarr; upload to SharePoint</li>
+        <li>Click <strong>Sync Stories</strong></li>
+        <li>Download the updated Excel and upload it back to SharePoint</li>
       </ol>
     </div>
 
@@ -462,14 +462,14 @@
       var reader = new FileReader();
       reader.onload = function(e) {
         var allRows = parseCSV(e.target.result);
-        if (allRows.length < 2) { toast('CSV appears empty.', 'error'); return; }
+        if (allRows.length < 2) { toast('The CSV file appears to be empty — check your Jira export.', 'error'); return; }
 
         var header = allRows[0].map(function(h) { return h.trim(); });
         var lower  = header.map(function(h) { return h.toLowerCase(); });
         var keyIdx = findCol(lower, KEY_CANDIDATES);
 
         if (keyIdx === null) {
-          toast('No Issue Key column found in CSV.', 'error'); return;
+          toast('No Issue Key column found — make sure you exported from Jira with the Issue Key field included.', 'error'); return;
         }
 
         var dataRows = allRows.slice(1).filter(function(r) { return r.some(function(v){ return v.trim(); }); });
@@ -486,12 +486,12 @@
           stories.push({ key: key, sprint: sprint });
         }
 
-        if (!stories.length) { toast('No stories found in CSV.', 'error'); return; }
+        if (!stories.length) { toast('No valid Jira stories found — the CSV may have been exported without Issue Key values.', 'error'); return; }
 
         var json = JSON.stringify(stories, null, 2);
         document.getElementById('vdiJsonText').value = json;
         document.getElementById('vdiJsonBox').classList.remove('hidden');
-        toast('Parsed ' + stories.length + ' stories. Copy the text below.', 'success');
+        toast('Found ' + stories.length + ' stor' + (stories.length === 1 ? 'y' : 'ies') + '. Click Copy, then paste on your other machine.', 'success');
       };
       reader.readAsText(input.files[0]);
     });
@@ -504,7 +504,7 @@
         document.execCommand('copy');
         toast('Copied!', 'success');
       } catch(ex) {
-        toast('Select all the text in the box and copy manually.', 'error');
+        toast('Auto-copy failed — click inside the box, select all (Ctrl+A), and copy manually.', 'error');
       }
     });
 
