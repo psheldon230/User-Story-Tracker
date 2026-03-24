@@ -154,9 +154,9 @@ class TestSyncExcel:
         xl = make_excel(["Sprint", "Key", today_str])
         stories = [{"key": "PROJ-1", "sprint": "Sprint 1"},
                    {"key": "PROJ-2", "sprint": "Sprint 2"}]
-        result, new_count, skipped = sync_excel(xl, stories)
-        assert new_count == 2
-        assert skipped == 0
+        result, added, skipped = sync_excel(xl, stories)
+        assert added == ["PROJ-1", "PROJ-2"]
+        assert skipped == []
         rows = self._read_excel_rows(result)
         keys = [r[1] for r in rows[1:]]
         assert "PROJ-1" in keys
@@ -168,17 +168,17 @@ class TestSyncExcel:
                         rows=[["Sprint 1", "PROJ-1", None]])
         stories = [{"key": "PROJ-1", "sprint": "Sprint 1"},
                    {"key": "PROJ-2", "sprint": "Sprint 2"}]
-        _, new_count, skipped = sync_excel(xl, stories)
-        assert new_count == 1
-        assert skipped == 1
+        _, added, skipped = sync_excel(xl, stories)
+        assert added == ["PROJ-2"]
+        assert skipped == ["PROJ-1"]
 
     def test_no_duplicates_within_batch(self):
         xl = make_excel(["Sprint", "Key"])
         stories = [{"key": "PROJ-1", "sprint": "S1"},
                    {"key": "PROJ-1", "sprint": "S1"}]  # duplicate
-        _, new_count, skipped = sync_excel(xl, stories)
-        assert new_count == 1
-        assert skipped == 1
+        _, added, skipped = sync_excel(xl, stories)
+        assert added == ["PROJ-1"]
+        assert skipped == ["PROJ-1"]
 
     def test_sprint_written_to_column_a(self):
         xl = make_excel(["Sprint", "Key"])
@@ -190,9 +190,9 @@ class TestSyncExcel:
 
     def test_empty_stories_list(self):
         xl = make_excel(["Sprint", "Key"])
-        _, new_count, skipped = sync_excel(xl, [])
-        assert new_count == 0
-        assert skipped == 0
+        _, added, skipped = sync_excel(xl, [])
+        assert added == []
+        assert skipped == []
 
 
 # ── Flask routes ──────────────────────────────────────────────────────────────
@@ -280,3 +280,46 @@ class TestSyncRoute:
             content_type="multipart/form-data",
         )
         assert resp.status_code == 303
+
+    def test_fetch_returns_summary_json(self, client):
+        xl = make_excel(["Sprint", "Key"],
+                        rows=[["Sprint 1", "PROJ-1", None]])
+        stories = [
+            {"key": "PROJ-1", "sprint": "Sprint 1"},  # already exists
+            {"key": "PROJ-2", "sprint": "Sprint 2"},  # new
+        ]
+        resp = client.post(
+            "/sync",
+            data=self._make_multipart(stories, xl),
+            content_type="multipart/form-data",
+            headers={"X-Requested-With": "fetch"},
+        )
+        assert resp.status_code == 200
+        assert resp.content_type == "application/json"
+        data = json.loads(resp.data)
+        assert data["added"] == ["PROJ-2"]
+        assert data["skipped"] == ["PROJ-1"]
+        assert "excel_b64" in data
+        assert "filename" in data
+
+
+class TestDuplicateSprintColumn:
+
+    def test_picks_column_with_higher_sprint_number(self):
+        """When two Sprint columns exist, use the one with the higher sprint number."""
+        data = csv_bytes(
+            "Issue key,Sprint,Summary,Sprint",
+            "PROJ-1,Sprint 2,Story one,Sprint 5",
+            "PROJ-2,Sprint 2,Story two,Sprint 5",
+        )
+        stories, _ = parse_jira_csv(data)
+        assert all(s["sprint"] == "Sprint 5" for s in stories)
+
+    def test_picks_higher_even_if_earlier_column(self):
+        """Column order doesn't matter — highest number wins."""
+        data = csv_bytes(
+            "Issue key,Sprint,Summary,Sprint",
+            "PROJ-1,Sprint 9,Story one,Sprint 3",
+        )
+        stories, _ = parse_jira_csv(data)
+        assert stories[0]["sprint"] == "Sprint 9"

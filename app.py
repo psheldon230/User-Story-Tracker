@@ -158,12 +158,12 @@ def sync_excel(excel_bytes: bytes, stories: list) -> tuple:
 
     max_col = ws.max_column
     today = date.today()
-    new_count = 0
-    skipped_count = 0
+    added_keys = []
+    skipped_keys = []
 
     for story in stories:
         if story["key"] in existing_keys:
-            skipped_count += 1
+            skipped_keys.append(story["key"])
             continue
 
         new_row = [None] * max_col
@@ -176,12 +176,12 @@ def sync_excel(excel_bytes: bytes, stories: list) -> tuple:
 
         ws.append(new_row)
         existing_keys.add(story["key"])
-        new_count += 1
+        added_keys.append(story["key"])
 
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
-    return output.read(), new_count, skipped_count
+    return output.read(), added_keys, skipped_keys
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -256,14 +256,26 @@ def sync():
         else:
             return redirect(url_for("index", error="Please upload a Jira CSV, a stories JSON file, or paste the JSON text."), 303)
 
-        updated_bytes, new_count, skipped_count = sync_excel(excel_file.read(), stories)
+        import base64
+        updated_bytes, added_keys, skipped_keys = sync_excel(excel_file.read(), stories)
 
         today_str = date.today().strftime("%Y%m%d")
+        filename = f"stories_updated_{today_str}.xlsx"
+
+        # AJAX callers get JSON summary + base64 Excel
+        if request.headers.get("X-Requested-With") == "fetch":
+            return jsonify({
+                "added": added_keys,
+                "skipped": skipped_keys,
+                "filename": filename,
+                "excel_b64": base64.b64encode(updated_bytes).decode("utf-8"),
+            })
+
         return send_file(
             io.BytesIO(updated_bytes),
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             as_attachment=True,
-            download_name=f"stories_updated_{today_str}.xlsx",
+            download_name=filename,
         )
 
     except RuntimeError as e:
