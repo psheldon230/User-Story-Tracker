@@ -71,9 +71,9 @@
       <p class="text-amber-800 text-sm font-semibold mb-2">VDI Step &mdash; use this tab on VDI</p>
       <ol class="text-amber-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
         <li>In Novartis Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong></li>
-        <li>Upload the CSV here and click <strong>Parse &amp; Download JSON</strong></li>
-        <li>Save the downloaded <code>.json</code> file and send it to yourself over Teams</li>
-        <li>Switch to your Deloitte machine &rarr; use <strong>Office: Sync JSON</strong> tab</li>
+        <li>Upload the CSV here and click <strong>Parse &amp; Copy JSON</strong></li>
+        <li>The JSON text appears &mdash; click <strong>Copy</strong> and paste it into a Teams message to yourself</li>
+        <li>Switch to your Deloitte machine &rarr; use <strong>Office: Sync JSON</strong> tab &rarr; paste the text</li>
       </ol>
     </div>
 
@@ -81,10 +81,10 @@
     <div id="instructions-office" class="bg-emerald-50 border border-emerald-100 rounded-xl px-5 py-4 hidden">
       <p class="text-emerald-800 text-sm font-semibold mb-2">Deloitte Machine Step</p>
       <ol class="text-emerald-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
-        <li>Download the <code>.json</code> file from Teams (sent from VDI)</li>
-        <li>Download your Excel tracker from SharePoint</li>
-        <li>Upload both files below and click <strong>Sync Stories</strong></li>
-        <li>Download the updated Excel &rarr; upload back to SharePoint</li>
+        <li>Open the Teams message you sent from VDI &mdash; copy the JSON text</li>
+        <li>Paste it into the box below</li>
+        <li>Download your Excel tracker from SharePoint and upload it</li>
+        <li>Click <strong>Sync Stories</strong> &rarr; download the updated Excel &rarr; upload to SharePoint</li>
       </ol>
     </div>
 
@@ -145,8 +145,8 @@
       </button>
     </form>
 
-    <!-- ── VDI FORM ── -->
-    <form id="vdiForm" action="/parse-csv" method="POST" enctype="multipart/form-data" class="space-y-4 hidden">
+    <!-- ── VDI FORM ── (client-side only — no server call needed) -->
+    <div id="vdiForm" class="space-y-4 hidden">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
           <span class="w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
@@ -162,7 +162,7 @@
             <p id="vdiCsvLabel" class="text-sm text-gray-500">
               <span class="text-amber-600 font-medium">Upload Jira CSV</span> or drag &amp; drop
             </p>
-            <input type="file" id="vdi_jira_csv" name="jira_csv" accept=".csv" />
+            <input type="file" id="vdi_jira_csv" accept=".csv" />
           </label>
           <div id="vdiCsvPreview" class="hidden mt-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Detected columns</p>
@@ -172,32 +172,48 @@
         </div>
       </div>
 
-      <button type="submit" id="vdiParseBtn"
+      <button type="button" id="vdiParseBtn"
         class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow transition-colors flex items-center justify-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/>
         </svg>
-        Parse &amp; Download JSON
+        Parse &amp; Show JSON
       </button>
-    </form>
+
+      <!-- JSON output box — shown after parsing -->
+      <div id="vdiJsonBox" class="hidden bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between gap-2">
+          <span class="text-sm font-semibold text-amber-800">JSON &mdash; copy and paste into Teams</span>
+          <button type="button" id="vdiCopyBtn"
+            style="background:#f59e0b;color:#fff;font-size:12px;font-weight:600;padding:4px 14px;border-radius:6px;border:none;cursor:pointer;">
+            Copy
+          </button>
+        </div>
+        <div class="p-5">
+          <textarea id="vdiJsonText" readonly
+            style="width:100%;height:160px;font-family:monospace;font-size:11px;background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;padding:10px;resize:vertical;color:#374151;"></textarea>
+          <p class="text-xs text-amber-700 mt-2">Select all &rarr; copy &rarr; paste into a Teams message to yourself.</p>
+        </div>
+      </div>
+    </div>
 
     <!-- ── OFFICE FORM ── -->
     <form id="officeForm" action="/sync" method="POST" enctype="multipart/form-data" class="space-y-4 hidden">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
           <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
-          <span class="text-sm font-semibold text-gray-700">Stories JSON <span class="text-gray-400 font-normal">(from Teams)</span></span>
+          <span class="text-sm font-semibold text-gray-700">Stories JSON <span class="text-gray-400 font-normal">(paste from Teams)</span></span>
         </div>
         <div class="p-5">
+          <textarea id="officePasteBox" name="stories_json_text" placeholder="Paste the JSON text from Teams here..."
+            style="width:100%;height:120px;font-family:monospace;font-size:11px;background:#f9fafb;border:1px solid #d1fae5;border-radius:8px;padding:10px;resize:vertical;color:#374151;"></textarea>
+          <p class="text-xs text-gray-400 mt-2">Or upload the .json file if you have it:</p>
           <label id="officeJsonDrop"
-            class="drop-zone flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-emerald-400 hover:bg-emerald-50">
-            <svg id="officeJsonIcon" class="w-7 h-7 text-gray-400 mb-1\.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-            </svg>
-            <p id="officeJsonLabel" class="text-sm text-gray-500">
-              <span class="text-emerald-600 font-medium">Upload stories .json</span> or drag &amp; drop
+            class="drop-zone flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 mt-2"
+            style="padding:12px;">
+            <p id="officeJsonLabel" class="text-sm text-gray-400">
+              <span class="text-emerald-600 font-medium">Upload .json file</span> (optional)
             </p>
             <input type="file" id="office_stories_json" name="stories_json" accept=".json" />
           </label>
@@ -366,8 +382,95 @@
     makeDropZone('fullXlDrop',     'full_excel_file',     'fullXlLabel',     'fullXlIcon',     null);
     makeDropZone('vdiCsvDrop',     'vdi_jira_csv',        'vdiCsvLabel',     'vdiCsvIcon',
       function(f) { previewCsv(f, 'vdiCsvCols', 'vdiCsvWarning', 'vdiCsvPreview'); });
-    makeDropZone('officeJsonDrop', 'office_stories_json', 'officeJsonLabel', 'officeJsonIcon', null);
+    makeDropZone('officeJsonDrop', 'office_stories_json', 'officeJsonLabel', null,             null);
     makeDropZone('officeXlDrop',   'office_excel_file',   'officeXlLabel',   'officeXlIcon',   null);
+
+    // ── Sprint name normalisation ──────────────────────────────────────────────
+    // "Y26.SP04" → "Sprint 4",  "Y26.SP12" → "Sprint 12"
+    // Also handles: "Sprint 4", "SP04", "Sprint04" — passes through if already clean
+    function normaliseSprint(raw) {
+      if (!raw) return '';
+      // Match YYY.SPnn or SPnn pattern
+      var m = raw.match(/SP0*(\d+)/i);
+      if (m) return 'Sprint ' + parseInt(m[1], 10);
+      // Already looks like "Sprint N"
+      var m2 = raw.match(/sprint\s*(\d+)/i);
+      if (m2) return 'Sprint ' + parseInt(m2[1], 10);
+      return raw; // unknown format — keep as-is
+    }
+
+    // ── VDI: client-side CSV → JSON ───────────────────────────────────────────
+    document.getElementById('vdiParseBtn').addEventListener('click', function() {
+      var input = document.getElementById('vdi_jira_csv');
+      if (!input.files.length) {
+        toast('Please upload the Jira CSV first.', 'error'); return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var text   = e.target.result.replace(/^\uFEFF/, '');
+        var lines  = text.split('\n');
+        if (!lines.length) { toast('CSV appears empty.', 'error'); return; }
+
+        // Parse header
+        var header = parseCSVRow(lines[0]);
+        var lower  = header.map(function(h) { return h.toLowerCase(); });
+        var keyIdx    = findCol(lower, KEY_CANDIDATES);
+        var sprintIdx = findCol(lower, SPRINT_CANDIDATES);
+
+        if (keyIdx === null) {
+          toast('No Issue Key column found in CSV.', 'error'); return;
+        }
+
+        var stories = [];
+        for (var i = 1; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (!line) continue;
+          var cols = parseCSVRow(line);
+          var key  = cols[keyIdx] ? cols[keyIdx].trim() : '';
+          if (!key) continue;
+          var sprint = sprintIdx !== null && cols[sprintIdx] ? normaliseSprint(cols[sprintIdx].trim()) : '';
+          stories.push({ key: key, sprint: sprint });
+        }
+
+        if (!stories.length) { toast('No stories found in CSV.', 'error'); return; }
+
+        var json = JSON.stringify(stories, null, 2);
+        document.getElementById('vdiJsonText').value = json;
+        document.getElementById('vdiJsonBox').classList.remove('hidden');
+        toast('Parsed ' + stories.length + ' stories. Copy the text below.', 'success');
+      };
+      reader.readAsText(input.files[0]);
+    });
+
+    // ── Copy button ────────────────────────────────────────────────────────────
+    document.getElementById('vdiCopyBtn').addEventListener('click', function() {
+      var ta = document.getElementById('vdiJsonText');
+      ta.select();
+      try {
+        document.execCommand('copy');
+        toast('Copied! Paste into Teams.', 'success');
+      } catch(ex) {
+        toast('Select all the text in the box and copy manually.', 'error');
+      }
+    });
+
+    // ── Minimal CSV row parser (handles quoted fields) ─────────────────────────
+    function parseCSVRow(line) {
+      var result = [], cur = '', inQ = false;
+      for (var i = 0; i < line.length; i++) {
+        var c = line[i];
+        if (c === '"') {
+          if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+          else { inQ = !inQ; }
+        } else if (c === ',' && !inQ) {
+          result.push(cur); cur = '';
+        } else {
+          cur += c;
+        }
+      }
+      result.push(cur);
+      return result;
+    }
 
     // ── Form validation (blocks submit only if files missing) ──────────────────
     document.getElementById('fullForm').addEventListener('submit', function(e) {
@@ -386,8 +489,10 @@
     });
 
     document.getElementById('officeForm').addEventListener('submit', function(e) {
-      if (!document.getElementById('office_stories_json').files.length) {
-        e.preventDefault(); toast('Please upload the stories JSON.', 'error'); return;
+      var hasPaste = document.getElementById('officePasteBox').value.trim().length > 0;
+      var hasFile  = document.getElementById('office_stories_json').files.length > 0;
+      if (!hasPaste && !hasFile) {
+        e.preventDefault(); toast('Please paste the JSON text or upload the .json file.', 'error'); return;
       }
       if (!document.getElementById('office_excel_file').files.length) {
         e.preventDefault(); toast('Please upload the Excel file.', 'error'); return;

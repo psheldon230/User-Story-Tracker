@@ -20,6 +20,20 @@ KEY_CANDIDATES    = ["Issue key", "Issue Key", "Key", "key"]
 SPRINT_CANDIDATES = ["Sprint", "sprint", "Sprint Name", "Custom field (Sprint)"]
 
 
+def _normalise_sprint(raw: str) -> str:
+    """Convert Jira sprint codes like 'Y26.SP04' or 'SP04' to 'Sprint 4'."""
+    import re
+    if not raw:
+        return ""
+    m = re.search(r"SP0*(\d+)", raw, re.IGNORECASE)
+    if m:
+        return f"Sprint {int(m.group(1))}"
+    m2 = re.search(r"sprint\s*(\d+)", raw, re.IGNORECASE)
+    if m2:
+        return f"Sprint {int(m2.group(1))}"
+    return raw
+
+
 def _find_column(header_row: list, candidates: list):
     lower = [h.strip().lower() for h in header_row]
     for candidate in candidates:
@@ -60,7 +74,7 @@ def parse_jira_csv(csv_bytes: bytes) -> tuple:
             continue
         sprint = ""
         if sprint_idx is not None and sprint_idx < len(row):
-            sprint = row[sprint_idx].strip()
+            sprint = _normalise_sprint(row[sprint_idx].strip())
         stories.append({"key": key, "sprint": sprint})
 
     return stories, warnings
@@ -190,6 +204,8 @@ def sync():
         if not excel_file or excel_file.filename == "":
             return redirect(url_for("index", error="Please upload your Excel tracker file."), 303)
 
+        json_text  = request.form.get("stories_json_text", "").strip()
+
         warnings = []
         if json_file and json_file.filename != "":
             try:
@@ -198,12 +214,19 @@ def sync():
                 return redirect(url_for("index", error="Could not parse the stories JSON file."), 303)
             if not stories:
                 return redirect(url_for("index", error="No stories found in the JSON file."), 303)
+        elif json_text:
+            try:
+                stories = json.loads(json_text)
+            except Exception:
+                return redirect(url_for("index", error="Could not parse the pasted JSON. Make sure you copied the full text."), 303)
+            if not stories:
+                return redirect(url_for("index", error="No stories found in the pasted JSON."), 303)
         elif csv_file and csv_file.filename != "":
             stories, warnings = parse_jira_csv(csv_file.read())
             if not stories:
                 return redirect(url_for("index", error="No stories found in the Jira CSV."), 303)
         else:
-            return redirect(url_for("index", error="Please upload a Jira CSV or a stories JSON file."), 303)
+            return redirect(url_for("index", error="Please upload a Jira CSV, a stories JSON file, or paste the JSON text."), 303)
 
         updated_bytes, new_count, skipped_count = sync_excel(excel_file.read(), stories)
 
