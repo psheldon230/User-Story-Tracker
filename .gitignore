@@ -9,3 +9,6 @@ env/
 *.log
 .DS_Store
 dist/
+node_modules/
+package-lock.json
+tailwind.input.css
