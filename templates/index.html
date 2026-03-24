@@ -32,7 +32,7 @@
       </div>
       <div>
         <p class="font-bold text-gray-900 text-sm leading-tight">Story Tracker</p>
-        <p class="text-gray-400 text-xs">Jira CSV &rarr; Excel sync &mdash; v2</p>
+        <p class="text-gray-400 text-xs">Jira CSV &rarr; Excel sync &mdash; v3</p>
       </div>
     </div>
   </header>
@@ -357,8 +357,8 @@
       reader.onload = function(e) {
         var lines = e.target.result.replace(/^\uFEFF/, '').split('\n');
         if (!lines.length) return;
-        var header = lines[0].split(',').map(function(h) { return h.replace(/^"|"$/g, '').trim(); });
-        var lower  = header.map(function(h) { return h.toLowerCase(); });
+        var header = parseCSVRow(lines[0].trim());
+        var lower  = header.map(function(h) { return h.trim().toLowerCase(); });
         var keyIdx    = findCol(lower, KEY_CANDIDATES);
         var sprintIdx = findCol(lower, SPRINT_CANDIDATES);
 
@@ -460,8 +460,8 @@
         if (!lines.length) { toast('CSV appears empty.', 'error'); return; }
 
         // Parse header + all data rows first so we can pick the right sprint column
-        var header = parseCSVRow(lines[0]);
-        var lower  = header.map(function(h) { return h.toLowerCase(); });
+        var header = parseCSVRow(lines[0].trim());
+        var lower  = header.map(function(h) { return h.trim().toLowerCase(); });
         var keyIdx = findCol(lower, KEY_CANDIDATES);
 
         if (keyIdx === null) {
