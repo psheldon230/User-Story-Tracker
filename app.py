@@ -51,12 +51,15 @@ def parse_jira_csv(csv_bytes: bytes) -> tuple:
     if sprint_idx is None:
         warnings.append("No Sprint column found — Sprint will be left blank.")
 
+    import re
+    _jira_key_re = re.compile(r"^[A-Z][A-Z0-9_]+-\d+$", re.IGNORECASE)
+
     stories = []
     for row in rows[1:]:
         if not row:
             continue
         key = row[key_idx].strip() if key_idx < len(row) else ""
-        if not key:
+        if not key or not _jira_key_re.match(key):
             continue
         sprint = ""
         if sprint_idx is not None and sprint_idx < len(row):
