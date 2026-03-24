@@ -62,7 +62,7 @@
 
     <!-- Instructions: full -->
     <div id="instructions-full" class="bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-4">
-      <p class="text-indigo-800 text-sm font-semibold mb-2">How it works</p>
+      <p class="text-indigo-800 text-sm font-semibold mb-2">How it works &mdash; same machine</p>
       <ol class="text-indigo-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
         <li>In Novartis Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong></li>
         <li>Download your Excel tracker from SharePoint</li>
@@ -73,18 +73,20 @@
 
     <!-- Instructions: vdi -->
     <div id="instructions-vdi" class="bg-amber-50 border border-amber-100 rounded-xl px-5 py-4 hidden">
-      <p class="text-amber-800 text-sm font-semibold mb-2">VDI Step &mdash; Parse CSV</p>
+      <p class="text-amber-800 text-sm font-semibold mb-2">VDI Step &mdash; open this page in GitHub Codespaces</p>
       <ol class="text-amber-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
+        <li>On VDI: open GitHub &rarr; go to the repo &rarr; <strong>Code &rarr; Codespaces &rarr; Open</strong></li>
+        <li>In the Codespace terminal run: <code>python app.py</code> &rarr; open the public URL</li>
         <li>In Novartis Jira &rarr; run your filter &rarr; <strong>Export &rarr; CSV</strong></li>
-        <li>Upload the CSV below and click <strong>Parse &amp; Download JSON</strong></li>
-        <li>Send the downloaded <code>.json</code> file to yourself over Teams</li>
-        <li>On your office machine, switch to <strong>Office: Sync JSON</strong></li>
+        <li>Upload the CSV here and click <strong>Parse &amp; Download JSON</strong></li>
+        <li>Send the <code>.json</code> file to yourself over Teams</li>
+        <li>Switch to your Deloitte machine &rarr; open <strong>localhost:5000</strong> &rarr; use <strong>Office: Sync JSON</strong></li>
       </ol>
     </div>
 
     <!-- Instructions: office -->
     <div id="instructions-office" class="bg-emerald-50 border border-emerald-100 rounded-xl px-5 py-4 hidden">
-      <p class="text-emerald-800 text-sm font-semibold mb-2">Office Step &mdash; Sync from JSON</p>
+      <p class="text-emerald-800 text-sm font-semibold mb-2">Deloitte Machine Step &mdash; localhost:5000</p>
       <ol class="text-emerald-700 text-xs space-y-1 list-decimal list-inside leading-relaxed">
         <li>Download the <code>.json</code> file from Teams (sent from VDI)</li>
         <li>Download your Excel tracker from SharePoint</li>
