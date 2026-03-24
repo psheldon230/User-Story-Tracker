@@ -421,13 +421,14 @@
           toast('No Issue Key column found in CSV.', 'error'); return;
         }
 
+        var jiraKeyRe = /^[A-Z][A-Z0-9_]+-\d+$/i;
         var stories = [];
         for (var i = 1; i < lines.length; i++) {
           var line = lines[i].trim();
           if (!line) continue;
           var cols = parseCSVRow(line);
           var key  = cols[keyIdx] ? cols[keyIdx].trim() : '';
-          if (!key) continue;
+          if (!key || !jiraKeyRe.test(key)) continue;
           var sprint = sprintIdx !== null && cols[sprintIdx] ? normaliseSprint(cols[sprintIdx].trim()) : '';
           stories.push({ key: key, sprint: sprint });
         }
