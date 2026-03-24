@@ -46,15 +46,15 @@
 
     <!-- Mode tabs -->
     <div class="flex gap-1 bg-gray-100 rounded-xl p-1">
-      <button onclick="setMode('full')" id="tab-full"
+      <button id="tab-full"
         class="tab-btn flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors">
         Full Sync
       </button>
-      <button onclick="setMode('vdi')" id="tab-vdi"
+      <button id="tab-vdi"
         class="tab-btn flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors">
         VDI: Parse CSV
       </button>
-      <button onclick="setMode('office')" id="tab-office"
+      <button id="tab-office"
         class="tab-btn flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors">
         Office: Sync JSON
       </button>
@@ -266,6 +266,10 @@
         document.getElementById(`${m}Form`).classList.toggle('hidden', m !== mode);
       });
     }
+
+    document.getElementById('tab-full').addEventListener('click', () => setMode('full'));
+    document.getElementById('tab-vdi').addEventListener('click',  () => setMode('vdi'));
+    document.getElementById('tab-office').addEventListener('click', () => setMode('office'));
 
     setMode('full');
 
